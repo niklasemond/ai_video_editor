@@ -92,3 +92,10 @@ under the same monitored network-denial wrapper. Inspect `poses/` and `faces/`
 before running `prepare`. Run the additional `vision` stage in a separate process
 before `sample`. Reuse the text encoder and VAE; each required file is verified
 before loading. This remains a feasibility experiment, not a validated preset.
+
+For the experimental 480p job, `tiled_vae: true` uses native spatial tiles while
+retaining the full short temporal window. Temporal tiling was rejected after an
+actual source round trip showed ghosting. A 13-frame spatial-only round trip
+passed visual/resource checks; see LOCAL_TEST.md. This is not evidence that long
+unsegmented videos fit memory. Use the `roundtrip` stage to inspect reconstruction
+before relying on a changed VAE configuration.

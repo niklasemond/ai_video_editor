@@ -94,6 +94,26 @@ def save(name, value):
     part.replace(job / name)
 
 
+def load_vae():
+    vae = nodes.VAELoader().load_vae('wan_2.1_vae.safetensors')[0]
+    if config.get('tiled_vae', False):
+        # Native ComfyUI tiling; spatial units are pixels for encode, latents for decode.
+        def spatial_encode(pixels):
+            logging.info('Spatial VAE encode start: %s', tuple(pixels.shape))
+            result = vae.encode_tiled(pixels, tile_x=256, tile_y=256, overlap=64)
+            logging.info('Spatial VAE encode complete: %s', tuple(result.shape))
+            return result
+        def spatial_decode(latents):
+            logging.info('Spatial VAE decode start: %s', tuple(latents.shape))
+            result = vae.decode_tiled(latents, tile_x=32, tile_y=32, overlap=8)
+            logging.info('Spatial VAE decode complete: %s', tuple(result.shape))
+            return result
+        vae.encode = spatial_encode
+        vae.decode = spatial_decode
+        logging.info('Native spatial VAE tiles: encode 256x256; decode 32x32 latent; full temporal window')
+    return vae
+
+
 start = time.monotonic()
 print('STAGE', stage, 'START', flush=True)
 with torch.inference_mode():
@@ -109,7 +129,7 @@ with torch.inference_mode():
         save('vision.pt', vars(clip.encode_image(reference, crop=False)))
     elif stage == 'prepare':
         positive, negative = load('text.pt')
-        vae = nodes.VAELoader().load_vae('wan_2.1_vae.safetensors')[0]
+        vae = load_vae()
         pixels = torch.from_numpy(np.stack([np.asarray(Image.open(p).convert('RGB')) for p in sorted((job / 'frames').glob('*.png'))]).astype(np.float32) / 255)
         masks = torch.from_numpy(np.stack([np.asarray(Image.open(p).convert('L')) for p in sorted((job / 'masks').glob('*.png'))]).astype(np.float32) / 255)
         if config.get('blank_masked_source', True):
@@ -160,7 +180,7 @@ with torch.inference_mode():
         output = nodes.common_ksampler(model, config['seed'], config['steps'], config['cfg'], config.get('sampler','uni_pc'), 'simple', positive, negative, latent)[0]
         save('sampled.pt', {'samples': output['samples'][:, :, trim:].cpu()})
     elif stage in ('decode', 'roundtrip'):
-        vae = nodes.VAELoader().load_vae('wan_2.1_vae.safetensors')[0]
+        vae = load_vae()
         if stage == 'roundtrip':
             inputs = torch.from_numpy(np.stack([np.asarray(Image.open(p).convert('RGB')) for p in sorted((job / 'frames').glob('*.png'))]).astype(np.float32) / 255)
             pixels = vae.decode(vae.encode(inputs))

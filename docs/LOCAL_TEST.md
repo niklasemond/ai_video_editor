@@ -240,3 +240,49 @@ The low-resolution diagnostics are below the documented VACE 480p target. A
 the CPU comparison. Higher-resolution compositing has an explicit resize option
 and a preservation test; generation at that size has not yet been attempted.
 Source: https://github.com/ali-vilab/VACE/blob/main/README.md
+
+### Original-checkpoint CPU result and 480p test
+
+Original-checkpoint VACE CPU sampling completed in 664.15 seconds including
+loading; decoding took 56.76 seconds. The 67 resource samples peaked at warning
+pressure (2), swap increased from 5.454 GB to 6.846 GB, sampled RSS peaked at
+5.602 GB, and available disk remained above 82.451 GB. Representative frames
+closely resemble the earlier Q8/Metal Euler result: white T-shirt replacement,
+but stylized/different facial features, pose drift and colored patches. This
+fails quality and weakens the hypothesis that GGUF or Metal alone caused the
+VACE defects. The diagnostic MP4 passes full FFmpeg decoding.
+
+The next bounded test is the prepared 480x640, 13-frame CPU VACE job, using the
+original checkpoint, the same source interval/masks and a higher-resolution crop
+from the unchanged reference collage. Sampling is estimated at 40–70 minutes
+from the 11-minute low-resolution CPU benchmark, increased spatial area and
+reduced temporal count. This estimate is not a measured 480p benchmark. All
+resource thresholds remain active. No more model downloads are needed.
+
+The first untiled 480p preparation was stopped before sampling: swap rose from
+6.830 GB to a sampled peak of 13.076 GB, with warning pressure and the >2 GB/min
+swap-growth threshold exceeded. The child exited with failure; no prepared
+conditioning was accepted. Pressure recovered to normal after termination.
+
+A bounded remedy uses native ComfyUI VAE tiling, not a replacement engine:
+encoding tiles are 256x256 pixels, 9 frames, with 64-pixel/5-frame overlap;
+decoding tiles are 32x32 latent pixels, 3 latent frames, with 8-pixel/1-frame
+overlap. A 480p source round trip is being checked for dimensions, reconstruction
+and resource use before retrying preparation. Stop thresholds are unchanged.
+
+The temporal/spatial tiled round trip completed in 507.73 seconds with normal
+pressure throughout. It produced all 13 expected 480x640 frames, but representative
+frames show temporal ghosting and a motion discontinuity; normalized per-frame
+MAE ranges from 0.00287 to 0.06072. This result was rejected before generation.
+A corrected native spatial-only tiling check retains all 13 frames in each tile,
+removing temporal tile boundaries. Spatial tiles and resource thresholds remain
+unchanged. The rejected round-trip artifacts are retained privately for comparison.
+
+Spatial-only VAE tiling completed the source round trip in 470.86 seconds.
+All 13 expected 480x640 frames were produced. Representative frames no longer
+show the temporal ghosting/discontinuity; normalized per-frame MAE is
+0.00287–0.00828. Pressure stayed normal (1), swap fell from 7.364 GB to 7.238 GB,
+and sampled RSS peaked at 5.352 GB. This verifies the bounded VAE memory remedy
+for this short sequence. Preparation is now using spatial-only tiles (256x256
+pixels with 64-pixel overlap; decode 32x32 latent pixels with 8-pixel overlap),
+retaining the full temporal window. It does not establish generation quality.
