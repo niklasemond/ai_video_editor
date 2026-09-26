@@ -1,0 +1,13 @@
+{
+  "ComfyUI": {
+    "url": "https://github.com/Comfy-Org/ComfyUI",
+    "revision": "b8730510db30c8858e1e5d8e126ef19eac395560",
+    "tag": "v0.3.60",
+    "license": "GPL-3.0"
+  },
+  "ComfyUI-GGUF": {
+    "url": "https://github.com/city96/ComfyUI-GGUF",
+    "revision": "6ea2651e7df66d7585f6ffee804b20e92fb38b8a",
+    "license": "Apache-2.0"
+  }
+}

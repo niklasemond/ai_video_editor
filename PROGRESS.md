@@ -2,7 +2,9 @@
 
 Last updated: 2026-09-26.
 
-**Status: assessment complete; installation and generation blocked.** Read [the feasibility report](docs/FEASIBILITY.md) for evidence, estimates and limitations.
+**Status: local VACE runtime test in progress; no verified replacement yet.**
+See [the local test record](docs/LOCAL_TEST.md) for current measurements and fixes.
+The Spielberg findings below are historical; that installation is not being resumed.
 
 ## Completed
 

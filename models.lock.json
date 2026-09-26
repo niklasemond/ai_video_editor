@@ -1,0 +1,26 @@
+[
+  {
+    "repo": "samuelchristlie/Wan2.1-VACE-1.3B-GGUF",
+    "revision": "839f67aa27bb81ce7f0dc6005132d32df64e14df",
+    "filename": "Wan2.1-VACE-1.3B-Q8_0.gguf",
+    "size": 2317975232,
+    "sha256": "bbde4d08c4eeaaf8eaa68731878788b6ff0117cc22b3c3b489c1860b49c560a1",
+    "destination": "diffusion_models/Wan2.1-VACE-1.3B-Q8_0.gguf"
+  },
+  {
+    "repo": "city96/umt5-xxl-encoder-gguf",
+    "revision": "b535255bee98c2b0a59ea7c0ae2dcd0c6657b3b7",
+    "filename": "umt5-xxl-encoder-Q4_K_M.gguf",
+    "size": 3655145312,
+    "sha256": "17cf97a5bbbc60a646d6105b832b6f657ce904a8a1ad970e4b59df0c67584a40",
+    "destination": "text_encoders/umt5-xxl-encoder-Q4_K_M.gguf"
+  },
+  {
+    "repo": "Comfy-Org/Wan_2.1_ComfyUI_repackaged",
+    "revision": "123acf1cc74bccbb9bfff8ac1ee72edc08c2341d",
+    "filename": "split_files/vae/wan_2.1_vae.safetensors",
+    "size": 253815318,
+    "sha256": "2fc39d31359a4b0a64f55876d8ff7fa8d780956ae2cb13463b0223e15148976b",
+    "destination": "vae/wan_2.1_vae.safetensors"
+  }
+]
