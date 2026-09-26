@@ -29,6 +29,30 @@ def sample():
                 available_memory=psutil.virtual_memory().available, available_disk=available)
 
 
+def process_usage(pid):
+    """Include inference descendants when sandbox-exec remains a wrapper.
+
+    Summed RSS may count shared pages more than once; system pressure/swap,
+    rather than this diagnostic, govern termination.
+    """
+    root = psutil.Process(pid)
+    try:
+        members = [root] + root.children(recursive=True)
+        scope = 'process_tree'
+    except (psutil.AccessDenied, PermissionError):
+        members = [root]
+        scope = 'direct_child_only'
+    rss, cpu = 0, 0.0
+    for member in members:
+        try:
+            rss += member.memory_info().rss
+            times = member.cpu_times()
+            cpu += times.user + times.system
+        except (psutil.NoSuchProcess, psutil.AccessDenied, PermissionError):
+            pass
+    return dict(rss=rss, cpu_seconds=cpu, process_count=len(members), usage_scope=scope)
+
+
 def run(command, log):
     samples = [sample()]
     if reason(samples):
@@ -39,7 +63,7 @@ def run(command, log):
             while child.poll() is None:
                 s = sample()
                 try:
-                    s['rss'] = psutil.Process(child.pid).memory_info().rss
+                    s.update(process_usage(child.pid))
                 except psutil.NoSuchProcess:
                     pass
                 samples.append(s)

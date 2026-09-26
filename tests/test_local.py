@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / 'scripts'))
 from download_models import download, verify
-from resource_watch import reason, run
+from resource_watch import reason, run, process_usage
 from validation import validate_job, validate_vace_keys, flatten_video_frames, validate_motion_controls
 from assemble_preview import composite
 from PIL import Image
@@ -48,6 +48,19 @@ class DownloadTests(unittest.TestCase):
 
 
 class ResourceTests(unittest.TestCase):
+    def test_denied_process_inventory_does_not_stop_supervision(self):
+        from unittest.mock import Mock
+        process = Mock()
+        process.children.side_effect = PermissionError('restricted inventory')
+        process.memory_info.return_value.rss = 123
+        process.cpu_times.return_value.user = 2
+        process.cpu_times.return_value.system = 1
+        with patch('resource_watch.psutil.Process', return_value=process):
+            usage = process_usage(12345)
+        self.assertEqual(usage['usage_scope'], 'direct_child_only')
+        self.assertEqual(usage['rss'], 123)
+        self.assertEqual(usage['cpu_seconds'], 3)
+
     def test_motion_controls_missing_and_wrong_dimensions(self):
         with tempfile.TemporaryDirectory() as temp:
             root = pathlib.Path(temp)

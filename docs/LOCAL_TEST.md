@@ -20,7 +20,7 @@ were static findings; its memory/storage numbers were estimates, not benchmarks.
   values are in the lock files. Downloaded model hashes verified against their pinned manifests.
   VACE GGUF reports architecture `wan`, 1263 tensors and 438 VACE tensors, but
   subsequent full comparison exposed a missing required tensor (see below).
-- Dependency consistency check passed. Fourteen custom unit tests passed, covering
+- Dependency consistency check passed. Fifteen custom unit tests passed, covering
   missing/corrupt weights, interrupted/resumed downloads, resource thresholds,
   actual child-process cancellation/failure/recovery, incomplete VACE keys,
   video-batch flattening and exact preservation of pixels outside the composite mask.
@@ -148,9 +148,21 @@ remedy is in progress; it uses the same physical memory and is not assumed to fi
 
 At this stage, known project storage including environments, caches, diagnostics
 and the earlier Swift cache totals about 21 GB; important-usage available capacity
-is about 91 GB. Fourteen custom tests and dependency consistency checks pass.
+is about 91 GB. Fifteen custom tests and dependency consistency checks pass.
 The pose preprocessor retains upstream licenses; its OpenPose-derived portions
 carry non-commercial terms. These are separate from model moderation checks.
 
 Private media, crops, annotations, raw diagnostics, intermediate tensors and
 outputs remain excluded from Git. No media has been uploaded.
+
+### CPU Animate benchmark in progress
+
+The CPU-only retry completed step one in 219.46 seconds with normal pressure and
+declining swap. The initial sampling estimate is 70–90 minutes for this diagnostic
+segment; it continues under the same resource limits. This is not a quality result.
+
+Earlier RSS logs sampled the direct child only; where sandbox-exec remains a
+wrapper, those figures undercount inference descendants. They are not total model
+or unified-memory measurements. The supervisor now records process-tree RSS and
+CPU time where permitted, labeling direct-child-only fallback. Summed RSS can
+double-count shared pages. System-wide pressure/swap/disk remain the stop criteria.
