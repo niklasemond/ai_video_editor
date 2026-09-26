@@ -3,6 +3,22 @@ from pathlib import Path
 from PIL import Image
 
 
+def validate_vace_keys(keys):
+    required = {'vace_patch_embedding.weight', 'vace_patch_embedding.bias',
+                'vace_blocks.0.before_proj.weight', 'vace_blocks.0.after_proj.weight'}
+    missing = required - set(keys)
+    if missing:
+        raise ValueError('Incomplete VACE checkpoint: ' + ', '.join(sorted(missing)))
+
+
+def flatten_video_frames(pixels, expected_shape):
+    if pixels.ndim == 5:
+        pixels = pixels.reshape(-1, *pixels.shape[-3:])
+    if tuple(pixels.shape) != tuple(expected_shape):
+        raise ValueError(f'Unexpected decoded dimensions: {tuple(pixels.shape)}')
+    return pixels
+
+
 def validate_job(job, config):
     for name in ('width', 'height'):
         value = config[name]

@@ -8,8 +8,11 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / 'scripts'))
 from download_models import download, verify
-from resource_watch import reason
-from validation import validate_job
+from resource_watch import reason, run
+from validation import validate_job, validate_vace_keys, flatten_video_frames
+from assemble_preview import composite
+from PIL import Image
+import numpy as np
 
 
 class DownloadTests(unittest.TestCase):
@@ -61,6 +64,56 @@ class ResourceTests(unittest.TestCase):
 
     def test_invalid_dimensions_fail_before_file_reads(self):
         with self.assertRaises(ValueError):validate_job('/unused',dict(width=191,height=256))
+
+    def test_incomplete_vace_cannot_silently_become_text_to_video(self):
+        with self.assertRaisesRegex(ValueError,'vace_patch_embedding.weight'):
+            validate_vace_keys(['vace_patch_embedding.bias','vace_blocks.0.before_proj.weight','vace_blocks.0.after_proj.weight'])
+        validate_vace_keys(['vace_patch_embedding.weight','vace_patch_embedding.bias','vace_blocks.0.before_proj.weight','vace_blocks.0.after_proj.weight'])
+
+    def test_resource_stop_terminates_child_and_allows_recovery(self):
+        real_popen = subprocess.Popen
+        children = []
+        def launch(*args, **kwargs):
+            p=real_popen(*args, **kwargs);children.append(p);return p
+        with tempfile.TemporaryDirectory() as temp:
+            log=pathlib.Path(temp)/'resources.jsonl'
+            with patch('resource_watch.sample', return_value=self.record(4)), patch('resource_watch.time.sleep'), patch('resource_watch.subprocess.Popen',side_effect=launch):
+                with self.assertRaisesRegex(RuntimeError,'critical'):
+                    run([sys.executable,'-c','import time;time.sleep(30)'],log)
+            self.assertIsNotNone(children[0].poll())
+            with patch('resource_watch.sample', return_value=self.record()), patch('resource_watch.time.sleep'):
+                self.assertEqual(run([sys.executable,'-c','raise SystemExit(7)'],log),7)
+                self.assertEqual(run([sys.executable,'-c','pass'],log),0)
+
+    def test_keyboard_cancellation_terminates_child(self):
+        real_popen = subprocess.Popen
+        children=[]
+        def launch(*args,**kwargs):
+            p=real_popen(*args,**kwargs);children.append(p);return p
+        with tempfile.TemporaryDirectory() as temp, patch('resource_watch.sample',return_value=self.record()), patch('resource_watch.subprocess.Popen',side_effect=launch), patch('resource_watch.time.sleep',side_effect=KeyboardInterrupt):
+            with self.assertRaises(KeyboardInterrupt):
+                run([sys.executable,'-c','import time;time.sleep(30)'],pathlib.Path(temp)/'log')
+        self.assertIsNotNone(children[0].poll())
+
+
+class CompositeTests(unittest.TestCase):
+    def test_native_video_batch_is_flattened_without_reordering(self):
+        a=np.arange(2*5*16*16*3).reshape(2,5,16,16,3)
+        result=flatten_video_frames(a,(10,16,16,3))
+        self.assertTrue(np.array_equal(result[5],a[1,0]))
+        with self.assertRaises(ValueError):flatten_video_frames(a,(5,16,16,3))
+
+    def test_untouched_pixels_are_identical(self):
+        source=Image.fromarray(np.random.default_rng(1).integers(0,256,(12,16,3),dtype=np.uint8))
+        generated=Image.new('RGB',(4,4),'red');mask=Image.new('L',(4,4),0)
+        mask.putpixel((1,1),255)
+        result=np.asarray(composite(source,generated,mask,(4,4,8,8)))
+        changed=np.any(result!=np.asarray(source),axis=2)
+        self.assertEqual(np.argwhere(changed).tolist(),[[5,5]])
+
+    def test_invalid_crop_rejected(self):
+        with self.assertRaises(ValueError):
+            composite(Image.new('RGB',(4,4)),Image.new('RGB',(4,4)),Image.new('L',(4,4)),(2,2,6,6))
 
 
 if __name__ == '__main__': unittest.main()
