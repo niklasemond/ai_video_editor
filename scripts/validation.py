@@ -34,6 +34,8 @@ def validate_motion_controls(job, config):
 def validate_job(job, config):
     if not isinstance(config.get('tiled_vae', False), bool):
         raise ValueError('tiled_vae must be boolean')
+    if not isinstance(config.get('composite_masks', False), bool):
+        raise ValueError('composite_masks must be boolean')
     if config.get('text_dtype', 'fp16') not in ('fp16', 'fp32'):
         raise ValueError('Unsupported text encoder precision')
     models = {

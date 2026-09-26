@@ -291,3 +291,15 @@ retaining the full temporal window. It does not establish generation quality.
 37 samples, pressure stayed normal, swap fell from 7.213 GB to 7.045 GB, sampled
 RSS peaked at 4.727 GB, and available disk remained above 83.729 GB. Sampling
 is now running with the original checkpoint on CPU.
+
+The first three 480p sampling steps take about 225–232 seconds each, revising
+the initial estimate to roughly 75–85 minutes for sampling. Early memory pressure
+is warning (2), with stable swap below the growth stop threshold. No decoded
+480p generation is available yet.
+
+The 13 prepared source crops match the corresponding compositing source frames
+bit-for-bit, ruling out a frame-selection mismatch for this diagnostic. Separate
+post-compositing masks refine foreground-person occlusions in the last frames;
+the original inference masks remain unchanged so the conditioning is traceable.
+These mask refinements are manually reviewed, not a demonstrated automatic
+segmentation pipeline for the full clip.

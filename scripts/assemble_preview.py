@@ -35,7 +35,8 @@ def main():
     if not args.source.is_file():raise ValueError('Source video missing')
     cfg=json.loads((args.job/'config.json').read_text())
     generated=sorted((args.job/'generated').glob('*.png'))
-    masks=sorted((args.job/'masks').glob('*.png'))
+    mask_folder = 'composite-masks' if cfg.get('composite_masks', False) else 'masks'
+    masks=sorted((args.job/mask_folder).glob('*.png'))
     if len(generated)!=cfg['frames'] or len(masks)!=cfg['frames']:
         raise ValueError('Incomplete generation or mask sequence')
     original=args.job/'source-frames';original.mkdir(exist_ok=True)

@@ -109,3 +109,9 @@ actual source round trip showed ghosting. A 13-frame spatial-only round trip
 passed visual/resource checks; see LOCAL_TEST.md. This is not evidence that long
 unsegmented videos fit memory. Use the `roundtrip` stage to inspect reconstruction
 before relying on a changed VAE configuration.
+
+Set `composite_masks: true` only when a reviewed `composite-masks/` sequence is
+present. It refines final compositing separately from the original `masks/`
+sequence used by inference, for example to retain foreground occluders. It must
+have the same frame count and generation dimensions. Original conditioning masks
+remain available for reproduction and inspection.
