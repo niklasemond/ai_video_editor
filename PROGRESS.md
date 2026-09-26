@@ -2,7 +2,7 @@
 
 Last updated: 2026-09-26.
 
-**Status: three local VACE tests failed visual quality; native Animate test in progress.**
+**Status: VACE and Q2 Animate tests run locally but fail visual quality; one Q3 comparison is in progress.**
 See [the local test record](docs/LOCAL_TEST.md) for current measurements and fixes.
 The Spielberg findings below are historical; that installation is not being resumed.
 

@@ -166,3 +166,45 @@ wrapper, those figures undercount inference descendants. They are not total mode
 or unified-memory measurements. The supervisor now records process-tree RSS and
 CPU time where permitted, labeling direct-child-only fallback. Summed RSS can
 double-count shared pages. System-wide pressure/swap/disk remain the stop criteria.
+
+### First CPU Animate completion
+
+The 13-frame, 192x256, 20-step Euler/CFG-5 CPU run completed sampling in
+3856.97 seconds (64m17s). Across 383 resource samples, pressure stayed normal
+(level 1), swap fell from 8.45 GB to 6.64 GB, and available disk never fell below
+88.43 GB. Direct-child sampled RSS peaked at 6.04 GB, with the scope caveat above.
+Decoding completed in 33.05 seconds. Representative output frames have distorted
+faces and increasing colored artifacts; this is a quality failure. It is not a
+finished replacement, despite successful CPU execution.
+
+A subsequent source check found that the original Animate configuration defaults
+to 20 steps, shift 5, guidance 1.0 and UniPC. CFG 5 in the first experiment was an
+unverified choice, not that default. If quality is inadequate, the next bounded
+comparison must correct these settings before attributing failure to quantization
+or increasing model size. Source:
+https://github.com/Wan-Video/Wan2.2/blob/1ea34ff48f87168174e12956e200b1d908b1c5ff/wan/configs/wan_animate_14B.py
+
+The bounded follow-up keeps the same weights, source/reference controls and seed,
+but uses upstream UniPC and CFG 1 on CPU. Expected sampling time is 30–40 minutes
+based on the measured CFG-5 run and removal of the extra guidance pass. No larger
+weights are downloaded before this correction is evaluated.
+
+### Upstream-default comparison and VAE isolation
+
+UniPC/CFG-1 CPU sampling completed in 2124.71 seconds (35m25s); decoding took
+29.88 seconds. The same severe colored artifacts and inadequate likeness persist.
+Across 211 samples there were no critical-pressure readings; pressure peaked at
+warning level 2, swap fell from 6.63 GB to 5.56 GB, and process-tree sampled RSS
+peaked at 5.23 GB. This configuration fails quality despite successful execution.
+
+A source-video VAE encode/decode round trip completed in 47.24 seconds. Visual
+inspection shows clean reconstruction without the generated neon/striping defects.
+Per-frame normalized mean absolute pixel error ranges from 0.0074 to 0.0201.
+This isolates the obvious corruption to generation rather than ordinary source
+reconstruction; it does not prove the exact cause within generation.
+
+One higher-precision comparison uses the pinned Q3_K_S file, 7,969,675,072 bytes,
+with all other corrected settings and inputs fixed. This choice follows measured
+CPU headroom of roughly 4–5 GB; its additional file size is not asserted to equal
+peak memory growth. Download and inference retain the same resource guards.
+Projected known project storage is about 29 GB. No output is accepted yet.

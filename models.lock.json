@@ -54,5 +54,13 @@
     "size": 134399116,
     "sha256": "724f4ff2439ed61afb86fb8a1951ec39c6220682803b4a8bd4f598cd913b1843",
     "destination": "pose/dw-ll_ucoco_384.onnx"
+  },
+  {
+    "repo": "QuantStack/Wan2.2-Animate-14B-GGUF",
+    "revision": "33c51bb84d4e70ffc0d088aeb6068d40d9446fa3",
+    "filename": "Wan2.2-Animate-14B-Q3_K_S.gguf",
+    "size": 7969675072,
+    "sha256": "34ac135fce253551ebd0f464449af3de43fb981c70d27371a32a59a753647709",
+    "destination": "diffusion_models/Wan2.2-Animate-14B-Q3_K_S.gguf"
   }
 ]

@@ -81,7 +81,10 @@ No Quality preset is claimed until a visually acceptable configuration is measur
 Clone `Fannovel16/comfyui_controlnet_aux` into `.local/controlnet_aux` and
 check out the revision in `upstream.lock.json`. Its per-component licenses apply.
 The pinned requirements include CPU ONNX Runtime and pose drawing dependencies.
-Set `engine` to `animate`, `sampler` to `euler` in the private config. Prepare
+Set `engine` to `animate`, `sampler` to `uni_pc`, `cfg` to `1`, and
+`device` to `cpu` in the private config. These match the verified original
+Animate sampler/guidance defaults; the earlier Euler/CFG-5 experiment failed
+visually. Prepare
 source frames, per-frame masks and reference as above, then run `pose_controls.py`
 under the same monitored network-denial wrapper. Inspect `poses/` and `faces/`
 before running `prepare`. Run the additional `vision` stage in a separate process

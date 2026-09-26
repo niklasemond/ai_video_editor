@@ -28,9 +28,10 @@ required = {
     'sample': {'Wan2.1-VACE-1.3B-Q8_0.gguf', 'wan2.1_vace_1.3B_fp16.safetensors'},
     'decode': {'wan_2.1_vae.safetensors'},
     'vision': {'clip_vision_h.safetensors'},
+    'roundtrip': {'wan_2.1_vae.safetensors'},
 }[stage]
 if animate and stage == 'sample':
-    required = {'Wan2.2-Animate-14B-Q2_K.gguf'}
+    required = {config.get('model', 'Wan2.2-Animate-14B-Q2_K.gguf')}
 for item in json.loads((ROOT / 'models.lock.json').read_text()):
     if pathlib.Path(item['filename']).name in required:
         if not verify(ROOT / '.local/ComfyUI/models' / item['destination'], item):
@@ -47,7 +48,7 @@ import comfy.options
 comfy.options.enable_args_parsing()
 sys.argv = ['vace-stage', '--disable-api-nodes', '--fp32-vae', '--cpu-vae',
             '--fp16-unet', '--fp16-text-enc', '--use-split-cross-attention']
-if stage in ('text', 'prepare', 'decode', 'vision') or config.get('device') == 'cpu':
+if stage in ('text', 'prepare', 'decode', 'vision', 'roundtrip') or config.get('device') == 'cpu':
     sys.argv += ['--cpu']
 import torch
 torch.set_num_threads(4)
@@ -128,7 +129,7 @@ with torch.inference_mode():
         if config.get('device') != 'cpu' and not torch.backends.mps.is_available():
             raise RuntimeError('Metal unavailable; run in a context with GPU access')
         positive, negative, latent, trim = load('prepared.pt')
-        model_name = 'Wan2.2-Animate-14B-Q2_K.gguf' if animate else 'Wan2.1-VACE-1.3B-Q8_0.gguf'
+        model_name = config.get('model', 'Wan2.2-Animate-14B-Q2_K.gguf') if animate else 'Wan2.1-VACE-1.3B-Q8_0.gguf'
         class RejectIncomplete(logging.Handler):
             def emit(self, record):
                 message = record.getMessage()
@@ -153,13 +154,17 @@ with torch.inference_mode():
         model = ModelSamplingSD3().patch(model, config.get('shift', 5.0))[0]
         output = nodes.common_ksampler(model, config['seed'], config['steps'], config['cfg'], config.get('sampler','uni_pc'), 'simple', positive, negative, latent)[0]
         save('sampled.pt', {'samples': output['samples'][:, :, trim:].cpu()})
-    elif stage == 'decode':
+    elif stage in ('decode', 'roundtrip'):
         vae = nodes.VAELoader().load_vae('wan_2.1_vae.safetensors')[0]
-        pixels = vae.decode(load('sampled.pt')['samples'])
+        if stage == 'roundtrip':
+            inputs = torch.from_numpy(np.stack([np.asarray(Image.open(p).convert('RGB')) for p in sorted((job / 'frames').glob('*.png'))]).astype(np.float32) / 255)
+            pixels = vae.decode(vae.encode(inputs))
+        else:
+            pixels = vae.decode(load('sampled.pt')['samples'])
         pixels = flatten_video_frames(pixels, (config['frames'], config['height'], config['width'], 3))
         if not torch.isfinite(pixels).all():
             raise RuntimeError('Nonfinite decoded pixels')
-        output = job / 'generated'; output.mkdir(exist_ok=True)
+        output = job / ('roundtrip' if stage == 'roundtrip' else 'generated'); output.mkdir(exist_ok=True)
         for i, frame in enumerate(pixels):
             Image.fromarray((frame.clamp(0,1).cpu().numpy()*255).round().astype(np.uint8)).save(output / f'{i:03}.png')
     else:
