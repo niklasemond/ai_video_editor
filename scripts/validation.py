@@ -19,6 +19,18 @@ def flatten_video_frames(pixels, expected_shape):
     return pixels
 
 
+def validate_motion_controls(job, config):
+    for folder, size in [('poses', (config['width'], config['height'])), ('faces', (512, 512))]:
+        paths = sorted((Path(job)/folder).glob('*.png'))
+        if len(paths) != config['frames']:
+            raise ValueError('Incomplete motion controls: ' + folder)
+        for path in paths:
+            with Image.open(path) as im:
+                im.load()
+                if im.size != size:
+                    raise ValueError('Wrong motion-control dimensions: ' + folder)
+
+
 def validate_job(job, config):
     for name in ('width', 'height'):
         value = config[name]

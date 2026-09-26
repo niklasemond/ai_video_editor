@@ -9,7 +9,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / 'scripts'))
 from download_models import download, verify
 from resource_watch import reason, run
-from validation import validate_job, validate_vace_keys, flatten_video_frames
+from validation import validate_job, validate_vace_keys, flatten_video_frames, validate_motion_controls
 from assemble_preview import composite
 from PIL import Image
 import numpy as np
@@ -48,6 +48,20 @@ class DownloadTests(unittest.TestCase):
 
 
 class ResourceTests(unittest.TestCase):
+    def test_motion_controls_missing_and_wrong_dimensions(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = pathlib.Path(temp)
+            cfg = dict(frames=1,width=192,height=256)
+            with self.assertRaisesRegex(ValueError, 'Incomplete'):
+                validate_motion_controls(root,cfg)
+            for folder,size in [('poses',(192,256)),('faces',(128,128))]:
+                (root/folder).mkdir()
+                Image.new('RGB',size).save(root/folder/'000.png')
+            with self.assertRaisesRegex(ValueError, 'dimensions'):
+                validate_motion_controls(root,cfg)
+            Image.new('RGB',(512,512)).save(root/'faces/000.png')
+            validate_motion_controls(root,cfg)
+
     def record(self, pressure=1, swap=0, disk=100_000_000_000):
         return dict(pressure=pressure,swap=swap,available_disk=disk)
 

@@ -75,3 +75,15 @@ It does not relax macOS memory protections. No NVIDIA-specific kernels are used.
 Inspect the generated sequence and composited preview for identity, clothing,
 silhouette, motion, occlusion and flicker. Successful execution is insufficient.
 No Quality preset is claimed until a visually acceptable configuration is measured.
+
+## Experimental Animate stage extension
+
+Clone `Fannovel16/comfyui_controlnet_aux` into `.local/controlnet_aux` and
+check out the revision in `upstream.lock.json`. Its per-component licenses apply.
+The pinned requirements include CPU ONNX Runtime and pose drawing dependencies.
+Set `engine` to `animate`, `sampler` to `euler` in the private config. Prepare
+source frames, per-frame masks and reference as above, then run `pose_controls.py`
+under the same monitored network-denial wrapper. Inspect `poses/` and `faces/`
+before running `prepare`. Run the additional `vision` stage in a separate process
+before `sample`. Reuse the text encoder and VAE; each required file is verified
+before loading. This remains a feasibility experiment, not a validated preset.

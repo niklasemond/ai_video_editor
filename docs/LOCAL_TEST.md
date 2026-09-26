@@ -1,4 +1,4 @@
-# Local VACE test — in progress
+# Local character-replacement tests — in progress
 
 This is an experimental staged runner, not a demonstrated replacement product.
 The historical Spielberg assessment remains in FEASIBILITY.md. Its missing modules
@@ -17,10 +17,10 @@ were static findings; its memory/storage numbers were estimates, not benchmarks.
   comfy-kitchen with PyTorch 2.5.1 (`list[int]` custom-op schema incompatibility).
   Pinned ComfyUI v0.3.60 plus the pinned GGUF loader imports successfully.
 - Exact code revisions and model revisions, filenames, byte counts and SHA-256
-  values are in the lock files. All three downloaded model hashes verified.
+  values are in the lock files. Downloaded model hashes verified against their pinned manifests.
   VACE GGUF reports architecture `wan`, 1263 tensors and 438 VACE tensors, but
   subsequent full comparison exposed a missing required tensor (see below).
-- Dependency consistency check passed. Thirteen custom unit tests passed, covering
+- Dependency consistency check passed. Fourteen custom unit tests passed, covering
   missing/corrupt weights, interrupted/resumed downloads, resource thresholds,
   actual child-process cancellation/failure/recovery, incomplete VACE keys,
   video-batch flattening and exact preservation of pixels outside the composite mask.
@@ -81,8 +81,12 @@ The bundled native inpainting template blanks the masked source region before
 VACE encoding. The first diagnostic retained those source pixels as a reactive
 control. A second bounded test follows the template's blanking behavior and uses
 its non-distilled settings of 20 steps and CFG 6. Preprocessing completed in
-78.01 seconds; sampling and visual evaluation are pending. No full-clip run or
-browser interface is justified by the first result.
+78.01 seconds; sampling completed in 395.46 seconds and decoding in 65.4 seconds.
+The output changed clothing but produced a posterized face and colored body artifacts.
+A final controlled comparison changed only UniPC to Euler: sampling 402.36 seconds,
+decoding 58.44 seconds. Euler improved clothing/body rendering but still had wrong
+identity, colored artifacts and pose drift. All three are quality failures.
+No full-clip run or browser interface is justified by these results.
 
 ## Offline and resource boundaries
 
@@ -123,8 +127,30 @@ The second candidate's pinned public metadata is
 QuantStack/Wan2.2-Animate-14B-GGUF at
 33c51bb84d4e70ffc0d088aeb6068d40d9446fa3: Q2_K 6,457,431,872 bytes and Q3_K_S
 7,969,675,072 bytes. Its native node supports reference, pose, face, background
-and character masks. It shares the UMT5/VAE stages, so the text-stage failure
-must be resolved first. No 14B memory-fit claim or download is made yet.
+and character masks. It shares the now-working UMT5/VAE stages. Q2_K and
+CLIP Vision H were individually downloaded and hash-verified for a bounded test.
+The Q2 file contains 1441 tensors, including face/pose modules, with architecture
+`wan`; native loader compatibility is checked during actual loading. BF16 storage
+is decoded through the GGUF loader into FP32/FP16, not executed as native BF16.
+No 14B memory-fit claim is made before sampling.
+
+The Animate test uses 13 frames at 192x256, Euler, 20 steps, CFG 5 and the same
+reference/masked source segment. Pinned DWPose ONNX runs on CPU with a manually
+selected performer box from each frame mask. Source-derived pose and 512x512 face
+crops were visually inspected. Crowded foreground occlusion makes estimated leg
+joints uncertain. Native replacement conditioning includes background and masks.
+Pose extraction completed; VAE preprocessing took 45.42 seconds and the separate
+reference encoder 1.60 seconds. MPS sampling loaded the correct architecture with no missing/unexpected weights,
+but the resource supervisor stopped it before step one: system swap rose from
+6.06 GB to a sampled peak of 11.50 GB in under a minute. Pressure reached warning
+level 2. After exit, pressure returned to normal and swap fell. A single CPU-only
+remedy is in progress; it uses the same physical memory and is not assumed to fit.
+
+At this stage, known project storage including environments, caches, diagnostics
+and the earlier Swift cache totals about 21 GB; important-usage available capacity
+is about 91 GB. Fourteen custom tests and dependency consistency checks pass.
+The pose preprocessor retains upstream licenses; its OpenPose-derived portions
+carry non-commercial terms. These are separate from model moderation checks.
 
 Private media, crops, annotations, raw diagnostics, intermediate tensors and
 outputs remain excluded from Git. No media has been uploaded.

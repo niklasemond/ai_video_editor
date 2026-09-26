@@ -9,5 +9,10 @@
     "url": "https://github.com/city96/ComfyUI-GGUF",
     "revision": "6ea2651e7df66d7585f6ffee804b20e92fb38b8a",
     "license": "Apache-2.0"
+  },
+  "controlnet_aux": {
+    "url": "https://github.com/Fannovel16/comfyui_controlnet_aux",
+    "revision": "59b1fc411ede8623b2997855b8018f0b3b6cf49f",
+    "license": "See upstream per-component licenses; OpenPose-derived preprocessing is non-commercial"
   }
 }

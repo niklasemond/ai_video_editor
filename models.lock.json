@@ -30,5 +30,29 @@
     "size": 4309519800,
     "sha256": "640ccc0577e6a5d4bb15cd91b11b699ef914fc55f126c5a1c544e152130784f2",
     "destination": "diffusion_models/wan2.1_vace_1.3B_fp16.safetensors"
+  },
+  {
+    "repo": "QuantStack/Wan2.2-Animate-14B-GGUF",
+    "revision": "33c51bb84d4e70ffc0d088aeb6068d40d9446fa3",
+    "filename": "Wan2.2-Animate-14B-Q2_K.gguf",
+    "size": 6457431872,
+    "sha256": "26679a25c6076b3cbcf696db8f6e28aff9eb6c13a4bff17f21cb7c52e257f1ba",
+    "destination": "diffusion_models/Wan2.2-Animate-14B-Q2_K.gguf"
+  },
+  {
+    "repo": "Comfy-Org/Wan_2.1_ComfyUI_repackaged",
+    "revision": "123acf1cc74bccbb9bfff8ac1ee72edc08c2341d",
+    "filename": "split_files/clip_vision/clip_vision_h.safetensors",
+    "size": 1264219396,
+    "sha256": "64a7ef761bfccbadbaa3da77366aac4185a6c58fa5de5f589b42a65bcc21f161",
+    "destination": "clip_vision/clip_vision_h.safetensors"
+  },
+  {
+    "repo": "yzd-v/DWPose",
+    "revision": "1a7144101628d69ee7a3768d1ee3a094070dc388",
+    "filename": "dw-ll_ucoco_384.onnx",
+    "size": 134399116,
+    "sha256": "724f4ff2439ed61afb86fb8a1951ec39c6220682803b4a8bd4f598cd913b1843",
+    "destination": "pose/dw-ll_ucoco_384.onnx"
   }
 ]

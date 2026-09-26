@@ -15,16 +15,22 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 stage, job_name = sys.argv[1:3]
 job = pathlib.Path(job_name).resolve()
 config = json.loads((job / 'config.json').read_text())
+animate = config.get('engine') == 'animate'
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
-from validation import validate_job, validate_vace_keys, flatten_video_frames
+from validation import validate_job, validate_vace_keys, flatten_video_frames, validate_motion_controls
 validate_job(job, config)
+if animate and stage in ('prepare', 'sample'):
+    validate_motion_controls(job, config)
 from download_models import verify
 required = {
     'text': {'umt5-xxl-encoder-Q4_K_M.gguf'},
     'prepare': {'wan_2.1_vae.safetensors'},
     'sample': {'Wan2.1-VACE-1.3B-Q8_0.gguf', 'wan2.1_vace_1.3B_fp16.safetensors'},
     'decode': {'wan_2.1_vae.safetensors'},
+    'vision': {'clip_vision_h.safetensors'},
 }[stage]
+if animate and stage == 'sample':
+    required = {'Wan2.2-Animate-14B-Q2_K.gguf'}
 for item in json.loads((ROOT / 'models.lock.json').read_text()):
     if pathlib.Path(item['filename']).name in required:
         if not verify(ROOT / '.local/ComfyUI/models' / item['destination'], item):
@@ -41,7 +47,7 @@ import comfy.options
 comfy.options.enable_args_parsing()
 sys.argv = ['vace-stage', '--disable-api-nodes', '--fp32-vae', '--cpu-vae',
             '--fp16-unet', '--fp16-text-enc', '--use-split-cross-attention']
-if stage in ('text', 'prepare', 'decode'):
+if stage in ('text', 'prepare', 'decode', 'vision') or config.get('device') == 'cpu':
     sys.argv += ['--cpu']
 import torch
 torch.set_num_threads(4)
@@ -49,7 +55,7 @@ import numpy as np
 from PIL import Image
 import nodes
 import comfy.model_management as mm
-from comfy_extras.nodes_wan import WanVaceToVideo
+from comfy_extras.nodes_wan import WanVaceToVideo, WanAnimateToVideo
 from comfy_extras.nodes_model_advanced import ModelSamplingSD3
 
 
@@ -94,6 +100,10 @@ with torch.inference_mode():
         for prompt in (config['positive'], config['negative']):
             result.append(clip.encode_from_tokens_scheduled(clip.tokenize(prompt)))
         save('text.pt', result)
+    elif stage == 'vision':
+        clip = nodes.CLIPVisionLoader().load_clip('clip_vision_h.safetensors')[0]
+        reference = torch.from_numpy(np.asarray(Image.open(job / 'reference.png').convert('RGB')).copy().astype(np.float32) / 255)[None]
+        save('vision.pt', vars(clip.encode_image(reference, crop=False)))
     elif stage == 'prepare':
         positive, negative = load('text.pt')
         vae = nodes.VAELoader().load_vae('wan_2.1_vae.safetensors')[0]
@@ -103,17 +113,45 @@ with torch.inference_mode():
             pixels = pixels * (1 - masks.unsqueeze(-1))
         reference = torch.from_numpy(np.asarray(Image.open(job / 'reference.png').convert('RGB')).copy().astype(np.float32) / 255)[None]
         assert len(pixels) == len(masks) == config['frames']
-        result = WanVaceToVideo.execute(positive, negative, vae, config['width'], config['height'], config['frames'], 1, config.get('strength',1.0), pixels, masks, reference)
+        if animate:
+            def images(folder):
+                paths = sorted((job / folder).glob('*.png'))
+                if len(paths) != config['frames']:
+                    raise ValueError('Incomplete motion controls: ' + folder)
+                return torch.from_numpy(np.stack([np.asarray(Image.open(p).convert('RGB')) for p in paths]).astype(np.float32) / 255)
+            result = WanAnimateToVideo.execute(positive, negative, vae, config['width'], config['height'], config['frames'], 1, 5, 0, reference_image=reference, face_video=images('faces'), pose_video=images('poses'), background_video=pixels, character_mask=masks)
+            result = list(result)[:4]
+        else:
+            result = WanVaceToVideo.execute(positive, negative, vae, config['width'], config['height'], config['frames'], 1, config.get('strength',1.0), pixels, masks, reference)
         save('prepared.pt', list(result))
     elif stage == 'sample':
-        if not torch.backends.mps.is_available():
+        if config.get('device') != 'cpu' and not torch.backends.mps.is_available():
             raise RuntimeError('Metal unavailable; run in a context with GPU access')
         positive, negative, latent, trim = load('prepared.pt')
-        model = gguf_nodes().UnetLoaderGGUF().load_unet('Wan2.1-VACE-1.3B-Q8_0.gguf', dequant_dtype='target')[0]
-        if model.model.model_config.unet_config.get('model_type') != 'vace':
-            raise RuntimeError('Refusing non-VACE model: source/reference controls would be ignored')
+        model_name = 'Wan2.2-Animate-14B-Q2_K.gguf' if animate else 'Wan2.1-VACE-1.3B-Q8_0.gguf'
+        class RejectIncomplete(logging.Handler):
+            def emit(self, record):
+                message = record.getMessage()
+                if message.startswith(('unet missing:', 'unet unexpected:')):
+                    raise RuntimeError('Incomplete or incompatible model: ' + message)
+        guard = RejectIncomplete()
+        logging.getLogger().addHandler(guard)
+        try:
+            model = gguf_nodes().UnetLoaderGGUF().load_unet(model_name, dequant_dtype='target')[0]
+        finally:
+            logging.getLogger().removeHandler(guard)
+        expected_type = 'animate' if animate else 'vace'
+        if model.model.model_config.unet_config.get('model_type') != expected_type:
+            raise RuntimeError('Refusing wrong model architecture: expected ' + expected_type)
+        if animate:
+            from comfy.clip_vision import Output
+            import node_helpers
+            vision = Output()
+            vars(vision).update(load('vision.pt'))
+            positive = node_helpers.conditioning_set_values(positive, {'clip_vision_output': vision})
+            negative = node_helpers.conditioning_set_values(negative, {'clip_vision_output': vision})
         model = ModelSamplingSD3().patch(model, config.get('shift', 5.0))[0]
-        output = nodes.common_ksampler(model, config['seed'], config['steps'], config['cfg'], 'uni_pc', 'simple', positive, negative, latent)[0]
+        output = nodes.common_ksampler(model, config['seed'], config['steps'], config['cfg'], config.get('sampler','uni_pc'), 'simple', positive, negative, latent)[0]
         save('sampled.pt', {'samples': output['samples'][:, :, trim:].cpu()})
     elif stage == 'decode':
         vae = nodes.VAELoader().load_vae('wan_2.1_vae.safetensors')[0]

@@ -2,11 +2,16 @@
 
 Last updated: 2026-09-26.
 
-**Status: local VACE runtime test in progress; no verified replacement yet.**
+**Status: three local VACE tests failed visual quality; native Animate test in progress.**
 See [the local test record](docs/LOCAL_TEST.md) for current measurements and fixes.
 The Spielberg findings below are historical; that installation is not being resumed.
 
-## Completed
+## Historical assessment (before local execution was restored)
+
+The statements below describe the earlier assessment only. Current runtime evidence
+and implementation status are in docs/LOCAL_TEST.md.
+
+### Completed
 
 - Authenticated GitHub access; inspected the README-only target baseline.
 - Pinned and reviewed Spielberg at `f692f93d73af996169244e9d8fa0178d6383f0d6`.
