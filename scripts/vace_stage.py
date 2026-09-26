@@ -14,6 +14,8 @@ import time
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 stage, job_name = sys.argv[1:3]
 job = pathlib.Path(job_name).resolve()
+from local_paths import validate_local_output
+validate_local_output(job)
 config = json.loads((job / 'config.json').read_text())
 animate = config.get('engine') == 'animate'
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')

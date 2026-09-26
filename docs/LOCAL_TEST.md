@@ -20,7 +20,7 @@ were static findings; its memory/storage numbers were estimates, not benchmarks.
   values are in the lock files. Downloaded model hashes verified against their pinned manifests.
   VACE GGUF reports architecture `wan`, 1263 tensors and 438 VACE tensors, but
   subsequent full comparison exposed a missing required tensor (see below).
-- Dependency consistency check passed. Eighteen custom unit tests passed, covering
+- Dependency consistency check passed. Twenty custom unit tests passed, covering
   missing/corrupt weights, interrupted/resumed downloads, resource thresholds,
   actual child-process cancellation/failure/recovery, incomplete VACE keys,
   video-batch flattening and exact preservation of pixels outside the composite mask.
@@ -286,3 +286,8 @@ and sampled RSS peaked at 5.352 GB. This verifies the bounded VAE memory remedy
 for this short sequence. Preparation is now using spatial-only tiles (256x256
 pixels with 64-pixel overlap; decode 32x32 latent pixels with 8-pixel overlap),
 retaining the full temporal window. It does not establish generation quality.
+
+480p preparation with spatial-only tiling completed in 364.97 seconds. Across
+37 samples, pressure stayed normal, swap fell from 7.213 GB to 7.045 GB, sampled
+RSS peaked at 4.727 GB, and available disk remained above 83.729 GB. Sampling
+is now running with the original checkpoint on CPU.

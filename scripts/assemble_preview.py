@@ -6,6 +6,7 @@ import subprocess
 
 import numpy as np
 from PIL import Image, ImageFilter
+from local_paths import validate_local_output
 
 
 def composite(source, generated, mask, box, resize_to_crop=False):
@@ -30,6 +31,7 @@ def main():
     parser.add_argument('job',type=pathlib.Path)
     parser.add_argument('source',type=pathlib.Path)
     args=parser.parse_args()
+    validate_local_output(args.job)
     if not args.source.is_file():raise ValueError('Source video missing')
     cfg=json.loads((args.job/'config.json').read_text())
     generated=sorted((args.job/'generated').glob('*.png'))

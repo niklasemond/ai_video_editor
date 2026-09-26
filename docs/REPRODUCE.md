@@ -4,6 +4,16 @@ This is a development harness. A visually acceptable replacement and browser
 interface have not yet been demonstrated. Do not treat the first diagnostic
 video as a completed edit.
 
+Use a workspace and private output folder outside cloud-synced locations.
+Git ignore rules and the inference network sandbox do not stop a separate sync
+client from uploading files. The media stages reject recognized Dropbox paths
+unless an ancestor has an explicit ignore attribute; this is not a universal
+backup/sync audit. For a Dropbox workspace, exclude task-created private data
+folders before creating assets, following the applicable Dropbox version's
+instructions: https://help.dropbox.com/sync/ignored-files . Ignoring an already
+synced folder keeps local files but removes remote/other-device copies. Never
+apply that change to unrelated source folders without authorization.
+
 Requirements: Apple Silicon Mac, Python 3.12, FFmpeg and Git. The measured test
 host uses macOS 14.5 and 16 GiB unified memory. No system Python packages are
 modified. Run from the repository root in a normal terminal with local GPU access.

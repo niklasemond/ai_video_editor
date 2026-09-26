@@ -11,8 +11,27 @@ from download_models import download, verify
 from resource_watch import reason, run, process_usage
 from validation import validate_job, validate_vace_keys, flatten_video_frames, validate_motion_controls
 from assemble_preview import composite
+from local_paths import validate_local_output
 from PIL import Image
 import numpy as np
+
+
+class LocalOutputTests(unittest.TestCase):
+    def test_nonsynced_path_allowed(self):
+        with tempfile.TemporaryDirectory() as temp:
+            validate_local_output(pathlib.Path(temp)/'job')
+
+    @unittest.skipUnless(sys.platform == 'darwin', 'macOS extended attributes')
+    def test_dropbox_requires_inherited_exclusion_and_resolves_symlinks(self):
+        with tempfile.TemporaryDirectory() as temp:
+            base=pathlib.Path(temp); cloud=base/'Dropbox'; cloud.mkdir()
+            alias=base/'alias'; alias.symlink_to(cloud, target_is_directory=True)
+            with self.assertRaisesRegex(ValueError, 'without an ignore'):
+                validate_local_output(alias/'job')
+            subprocess.run(['/usr/bin/xattr','-w','com.dropbox.ignored','1',str(cloud)],check=True)
+            validate_local_output(alias/'job')
+            subprocess.run(['/usr/bin/xattr','-w','com.dropbox.ignored','0',str(cloud)],check=True)
+            with self.assertRaises(ValueError):validate_local_output(alias/'job')
 
 
 class DownloadTests(unittest.TestCase):

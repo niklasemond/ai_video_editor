@@ -23,6 +23,8 @@ from download_models import verify
 
 def main():
     job = Path(sys.argv[1])
+    from local_paths import validate_local_output
+    validate_local_output(job)
     item = next(x for x in json.loads((ROOT/'models.lock.json').read_text())
                 if x['filename'] == 'dw-ll_ucoco_384.onnx')
     weight = ROOT / '.local/ComfyUI/models' / item['destination']
