@@ -32,6 +32,15 @@ def validate_motion_controls(job, config):
 
 
 def validate_job(job, config):
+    if config.get('text_dtype', 'fp16') not in ('fp16', 'fp32'):
+        raise ValueError('Unsupported text encoder precision')
+    models = {
+        'vace': ('Wan2.1-VACE-1.3B-Q8_0.gguf', 'wan2.1_vace_1.3B_fp16.safetensors'),
+        'animate': ('Wan2.2-Animate-14B-Q2_K.gguf', 'Wan2.2-Animate-14B-Q3_K_S.gguf'),
+    }
+    allowed = models.get(config.get('engine', 'vace'))
+    if allowed is None or config.get('model', allowed[0]) not in allowed:
+        raise ValueError('Unsupported model or engine combination')
     for name in ('width', 'height'):
         value = config[name]
         if not isinstance(value, int) or value < 16 or value % 16:

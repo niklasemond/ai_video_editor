@@ -20,7 +20,7 @@ were static findings; its memory/storage numbers were estimates, not benchmarks.
   values are in the lock files. Downloaded model hashes verified against their pinned manifests.
   VACE GGUF reports architecture `wan`, 1263 tensors and 438 VACE tensors, but
   subsequent full comparison exposed a missing required tensor (see below).
-- Dependency consistency check passed. Fifteen custom unit tests passed, covering
+- Dependency consistency check passed. Eighteen custom unit tests passed, covering
   missing/corrupt weights, interrupted/resumed downloads, resource thresholds,
   actual child-process cancellation/failure/recovery, incomplete VACE keys,
   video-batch flattening and exact preservation of pixels outside the composite mask.
@@ -208,3 +208,35 @@ with all other corrected settings and inputs fixed. This choice follows measured
 CPU headroom of roughly 4–5 GB; its additional file size is not asserted to equal
 peak memory growth. Download and inference retain the same resource guards.
 Projected known project storage is about 29 GB. No output is accepted yet.
+
+### Q3 result and shared-stage checks (2026-09-27)
+
+Animate Q3_K_S sampling completed in 2099.43 seconds (34m59s), followed by
+29.39 seconds of decoding. Across 209 resource samples, pressure remained normal
+(level 1), swap fell from 5.512 GB to 5.454 GB, sampled process-tree RSS peaked at
+5.382 GB, and available disk remained at least 83.577 GB. The same severe facial
+distortion, striping and late-frame color artifacts persist. Increasing precision
+did not produce an acceptable replacement. The diagnostic MP4 decodes completely:
+640x360, 13 frames at 12.5 fps, with video and audio both starting at zero and
+lasting 1.04 seconds. Representative frames were inspected; visual playback has
+not been verified.
+
+A CPU FP32 text-encoding diagnostic completed in 50.87 seconds. Both prompt
+tensors are bit-for-bit equal to those from the prior FP16 text setting. This
+rules out a difference caused by that flag in this configuration, not all possible
+text-encoder defects. Memory pressure briefly reached warning, without swap growth.
+
+A final pipeline comparison is running the already-downloaded original VACE
+checkpoint on CPU, retaining the Euler test's inputs, masks, seed and settings.
+This bypasses both GGUF diffusion loading and Metal without downloading more
+weights. Results remain pending. It is not an accepted generation configuration.
+
+Measured allocated storage for dependencies, environments, work, project caches
+and the known external diagnostic cache totals about 29.30 GB. Model alternatives
+remain counted; nothing has been removed to hide storage costs.
+
+The low-resolution diagnostics are below the documented VACE 480p target. A
+480x640, 13-frame version is prepared to test this remaining limitation after
+the CPU comparison. Higher-resolution compositing has an explicit resize option
+and a preservation test; generation at that size has not yet been attempted.
+Source: https://github.com/ali-vilab/VACE/blob/main/README.md

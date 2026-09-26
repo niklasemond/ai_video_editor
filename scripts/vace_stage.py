@@ -32,6 +32,8 @@ required = {
 }[stage]
 if animate and stage == 'sample':
     required = {config.get('model', 'Wan2.2-Animate-14B-Q2_K.gguf')}
+elif stage == 'sample' and config.get('model') == 'wan2.1_vace_1.3B_fp16.safetensors':
+    required = {config['model']}
 for item in json.loads((ROOT / 'models.lock.json').read_text()):
     if pathlib.Path(item['filename']).name in required:
         if not verify(ROOT / '.local/ComfyUI/models' / item['destination'], item):
@@ -47,7 +49,7 @@ sys.path.insert(0, str(ROOT / '.local/ComfyUI'))
 import comfy.options
 comfy.options.enable_args_parsing()
 sys.argv = ['vace-stage', '--disable-api-nodes', '--fp32-vae', '--cpu-vae',
-            '--fp16-unet', '--fp16-text-enc', '--use-split-cross-attention']
+            '--fp16-unet', '--' + config.get('text_dtype', 'fp16') + '-text-enc', '--use-split-cross-attention']
 if stage in ('text', 'prepare', 'decode', 'vision', 'roundtrip') or config.get('device') == 'cpu':
     sys.argv += ['--cpu']
 import torch
@@ -129,7 +131,7 @@ with torch.inference_mode():
         if config.get('device') != 'cpu' and not torch.backends.mps.is_available():
             raise RuntimeError('Metal unavailable; run in a context with GPU access')
         positive, negative, latent, trim = load('prepared.pt')
-        model_name = config.get('model', 'Wan2.2-Animate-14B-Q2_K.gguf') if animate else 'Wan2.1-VACE-1.3B-Q8_0.gguf'
+        model_name = config.get('model', 'Wan2.2-Animate-14B-Q2_K.gguf' if animate else 'Wan2.1-VACE-1.3B-Q8_0.gguf')
         class RejectIncomplete(logging.Handler):
             def emit(self, record):
                 message = record.getMessage()
@@ -138,7 +140,10 @@ with torch.inference_mode():
         guard = RejectIncomplete()
         logging.getLogger().addHandler(guard)
         try:
-            model = gguf_nodes().UnetLoaderGGUF().load_unet(model_name, dequant_dtype='target')[0]
+            if model_name == 'wan2.1_vace_1.3B_fp16.safetensors':
+                model = nodes.UNETLoader().load_unet(model_name, 'default')[0]
+            else:
+                model = gguf_nodes().UnetLoaderGGUF().load_unet(model_name, dequant_dtype='target')[0]
         finally:
             logging.getLogger().removeHandler(guard)
         expected_type = 'animate' if animate else 'vace'

@@ -22,9 +22,9 @@ git -C .local/ComfyUI-GGUF checkout 6ea2651e7df66d7585f6ffee804b20e92fb38b8a
 
 Downloads use individual immutable-revision URLs, HTTPS certificate verification,
 resumable `.part` files and published SHA-256 checksums. Failed or corrupt files
-are not loaded. The complete FP16 checkpoint is needed only to recover and
-validate the convolution omitted from the community GGUF; it is not loaded as
-the full inference model. See LOCAL_TEST.md for the exact defect and comparison.
+are not loaded. The complete FP16 checkpoint recovers and validates the convolution omitted
+from the community GGUF. It can also be selected for an original-checkpoint CPU
+diagnostic with `model: "wan2.1_vace_1.3B_fp16.safetensors"` and `device: "cpu"`. See LOCAL_TEST.md for the exact defect and comparison.
 
 A private job directory under `work/` contains `frames/000.png` onward,
 `masks/000.png` onward (white means replace), a cropped and aspect-padded
@@ -47,8 +47,10 @@ Example configuration fields (no input media is distributed):
 
 All frames, masks and the padded reference must match the generation dimensions.
 Frame count is 4n+1. `crop` uses source-video coordinates. For this harness the
-generated dimensions must equal the crop dimensions; automatic upscaling and
-full-clip segmentation are not implemented.
+generated dimensions must equal the crop dimensions unless `resize_to_crop` is
+explicitly true. That option resizes the generated crop and its mask into the
+source crop before compositing; it does not enlarge the full source frame.
+Full-clip segmentation is not implemented.
 
 Execute each stage sequentially. Every stage exits to release its models before
 the next one starts. Substitute the prepared private job directory for `work/job`.

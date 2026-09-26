@@ -1,8 +1,8 @@
 # Progress
 
-Last updated: 2026-09-26.
+Last updated: 2026-09-27.
 
-**Status: VACE and Q2 Animate tests run locally but fail visual quality; one Q3 comparison is in progress.**
+**Status: low-resolution VACE and Q2/Q3 Animate tests fail visual quality; an original-checkpoint CPU comparison is in progress.**
 See [the local test record](docs/LOCAL_TEST.md) for current measurements and fixes.
 The Spielberg findings below are historical; that installation is not being resumed.
 

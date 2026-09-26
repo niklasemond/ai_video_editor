@@ -61,6 +61,16 @@ class ResourceTests(unittest.TestCase):
         self.assertEqual(usage['rss'], 123)
         self.assertEqual(usage['cpu_seconds'], 3)
 
+    def test_invalid_text_precision_fails_before_input_access(self):
+        with self.assertRaisesRegex(ValueError, "precision"):
+            validate_job("missing", {"text_dtype": "fp8"})
+
+    def test_unknown_or_wrong_architecture_model_rejected(self):
+        for config in ({'model': 'unverified.gguf'}, {'engine': 'unknown'},
+                       {'engine': 'vace', 'model': 'Wan2.2-Animate-14B-Q2_K.gguf'}):
+            with self.assertRaisesRegex(ValueError, 'model or engine'):
+                validate_job('missing', config)
+
     def test_motion_controls_missing_and_wrong_dimensions(self):
         with tempfile.TemporaryDirectory() as temp:
             root = pathlib.Path(temp)
@@ -137,6 +147,17 @@ class CompositeTests(unittest.TestCase):
         result=np.asarray(composite(source,generated,mask,(4,4,8,8)))
         changed=np.any(result!=np.asarray(source),axis=2)
         self.assertEqual(np.argwhere(changed).tolist(),[[5,5]])
+
+    def test_resized_generation_preserves_source_outside_crop(self):
+        source = Image.new('RGB', (12,12), (20,40,60))
+        generated = Image.new('RGB', (8,8), (200,100,50))
+        mask = Image.new('L', (8,8), 255)
+        result = np.asarray(composite(source, generated, mask, (4,4,8,8), True))
+        expected = np.asarray(source).copy()
+        expected[4:8,4:8] = (200,100,50)
+        np.testing.assert_array_equal(result, expected)
+        with self.assertRaisesRegex(ValueError, 'dimensions'):
+            composite(source, generated, Image.new('L',(4,4)), (4,4,8,8), True)
 
     def test_invalid_crop_rejected(self):
         with self.assertRaises(ValueError):
