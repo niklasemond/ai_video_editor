@@ -19,5 +19,11 @@
     "url": "https://github.com/Wan-Video/Wan2.2",
     "revision": "1ea34ff48f87168174e12956e200b1d908b1c5ff",
     "purpose": "Reference only: verified Animate sampler defaults; original engine not installed"
+  },
+  "SAM2": {
+    "url": "https://github.com/facebookresearch/sam2",
+    "revision": "2b90b9f5ceec907a1c18123530e92e794ad901a4",
+    "license": "Apache-2.0",
+    "purpose": "CPU performer segmentation; optional CUDA postprocessing disabled"
   }
 }

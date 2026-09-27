@@ -12,8 +12,29 @@ from resource_watch import reason, run, process_usage
 from validation import validate_job, validate_vace_keys, flatten_video_frames, validate_motion_controls
 from assemble_preview import composite
 from local_paths import validate_local_output
+from segment_person import validate_prompts
 from PIL import Image
 import numpy as np
+
+
+class SegmentationPromptTests(unittest.TestCase):
+    def test_reviewed_positive_and_negative_points(self):
+        validate_prompts([{'frame': 0, 'points': [[20, 30], [50, 50]],
+                           'labels': [1, 0]}], 13, (100, 80))
+
+    def test_invalid_coordinates_and_frame_indices(self):
+        for frame, point in [(13, [20, 30]), (-1, [20, 30]),
+                             (0, [100, 20]), (0, [float('nan'), 20])]:
+            with self.subTest(frame=frame, point=point), self.assertRaises(ValueError):
+                validate_prompts([{'frame': frame, 'points': [point], 'labels': [1]}],
+                                 13, (100, 80))
+
+    def test_missing_initial_or_positive_prompt_rejected(self):
+        for prompts in [[], [{'frame': 1, 'points': [[20, 30]], 'labels': [1]}],
+                        [{'frame': 0, 'points': [[20, 30]], 'labels': [0]}],
+                        [{'frame': 0, 'points': [[20, 30]], 'labels': []}]]:
+            with self.subTest(prompts=prompts), self.assertRaises(ValueError):
+                validate_prompts(prompts, 13, (100, 80))
 
 
 class LocalOutputTests(unittest.TestCase):

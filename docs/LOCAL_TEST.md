@@ -321,3 +321,14 @@ A bounded 480x640 Animate Q3 CPU test uses the same interval and reference,
 fresh pose/face controls, native spatial VAE tiling, official 20-step/CFG1/shift5
 settings and UniPC. Estimated sampling is 3–5 hours from the smaller benchmark;
 this remains an estimate until measured. No larger generation weights are needed.
+
+The 480p VACE preview also reaches its expected end time in the local browser
+player without a media error. Its re-encoded audio has zero-lag correlation
+0.999022 with the corresponding source interval (16,640 mono samples at 16 kHz).
+Animate's 480p preparation completed in 382.16 seconds; sampling is running.
+
+SAM2 tiny preprocessing source/weights have been pinned and downloaded for
+full-clip occlusion masks. Its CPU runner is staged but has not yet been used for
+inference. Prompt validation brings the local suite to 23 passing tests; pip
+reports no broken requirements. Project files occupy about 29.6 GB, plus about
+0.13 GB of known external caches, before any additional full-clip generation.

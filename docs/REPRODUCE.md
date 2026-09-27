@@ -115,3 +115,29 @@ present. It refines final compositing separately from the original `masks/`
 sequence used by inference, for example to retain foreground occluders. It must
 have the same frame count and generation dimensions. Original conditioning masks
 remain available for reproduction and inspection.
+
+## Experimental tracked-mask preprocessing
+
+The pinned SAM2 tiny source belongs in `.local/SAM2`; its 156 MB checkpoint is
+listed in `models.lock.json`. The runner imports source directly, so no CUDA
+extension or SAM2 package build is needed. Dependencies are pinned in the lockfile.
+The CPU runner accepts contiguous, zero-based JPEG frames, a JSON list of
+`{frame, points: [[x,y], ...], labels: [1,0,...]}` records, and a new output folder:
+
+```sh
+.venv/bin/python scripts/resource_watch.py work/mask-resources.jsonl \
+  /usr/bin/sandbox-exec -p '(version 1)(allow default)(deny network*)' \
+  .venv/bin/python -u scripts/segment_person.py \
+  work/source-jpeg work/person-prompts.json work/person-masks
+```
+
+Use positive points on the performer and negative points on foreground people,
+including a first-frame prompt. Review every resulting mask sequence before use.
+An `INCOMPLETE` marker remains after interrupted/failed tracking; use a new output
+folder for recovery. The tracker never overwrites an earlier result. CUDA-only
+hole-filling postprocessing is disabled. SAM2 code/checkpoints use Apache-2.0;
+upstream licenses remain in its checkout. No application moderation service or
+content classifier was found in the inspected loader/tracker path. This is a
+bounded inspection, not a claim about every dependency or unrestricted capability.
+
+Prompt-validation tests pass; actual tracked-mask inference is still pending.

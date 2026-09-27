@@ -62,5 +62,13 @@
     "size": 7969675072,
     "sha256": "34ac135fce253551ebd0f464449af3de43fb981c70d27371a32a59a753647709",
     "destination": "diffusion_models/Wan2.2-Animate-14B-Q3_K_S.gguf"
+  },
+  {
+    "repo": "facebook/sam2.1-hiera-tiny",
+    "revision": "de431c4043854a71d8101e17995dfe596bf101a5",
+    "filename": "sam2.1_hiera_tiny.pt",
+    "size": 156008466,
+    "sha256": "7402e0d864fa82708a20fbd15bc84245c2f26dff0eb43a4b5b93452deb34be69",
+    "destination": "segmentation/sam2.1_hiera_tiny.pt"
   }
 ]
