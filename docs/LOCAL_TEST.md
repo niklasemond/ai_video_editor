@@ -303,3 +303,21 @@ post-compositing masks refine foreground-person occlusions in the last frames;
 the original inference masks remain unchanged so the conditioning is traceable.
 These mask refinements are manually reviewed, not a demonstrated automatic
 segmentation pipeline for the full clip.
+
+480p original-checkpoint CPU sampling completed in 4641.95 seconds (77.4 minutes).
+Across 461 resource samples, pressure peaked at warning (2), swap rose from
+6.986 GB to 8.501 GB, sampled RSS peaked at 5.135 GB, and available disk stayed
+above 80.298 GB. Spatial decode completed in 330.85 seconds. The 13-frame
+640x360 composited MP4 has matching 1.040-second video/audio durations and zero
+start offsets, and passes complete FFmpeg decoding.
+
+Representative frames show a substantial quality improvement: recognizable
+reference appearance, white T-shirt, dark trousers, and replaced body/silhouette,
+without the earlier neon corruption. However, the original arm-down pose becomes
+hands in pockets and the expression follows the smiling reference too closely.
+This is a saved diagnostic preview, not an accepted faithful final edit.
+
+A bounded 480x640 Animate Q3 CPU test uses the same interval and reference,
+fresh pose/face controls, native spatial VAE tiling, official 20-step/CFG1/shift5
+settings and UniPC. Estimated sampling is 3–5 hours from the smaller benchmark;
+this remains an estimate until measured. No larger generation weights are needed.

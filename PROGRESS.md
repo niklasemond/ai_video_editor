@@ -2,7 +2,7 @@
 
 Last updated: 2026-09-27.
 
-**Status: low-resolution VACE and Q2/Q3 Animate tests fail visual quality; the original-checkpoint CPU test also fails quality. A 480p CPU test is sampling after verified spatial VAE tiling.**
+**Status: 480p VACE produces a recognizable full-character preview, but changes the source arm pose and expression. Higher-resolution Animate is preparing to test motion fidelity. No full-clip result or validated UI yet.**
 See [the local test record](docs/LOCAL_TEST.md) for current measurements and fixes.
 The Spielberg findings below are historical; that installation is not being resumed.
 
