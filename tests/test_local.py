@@ -16,13 +16,20 @@ from validation import validate_job, validate_vace_keys, flatten_video_frames, v
 from assemble_preview import composite
 from local_paths import validate_local_output
 from segment_person import validate_prompts
-from prepare_job import select_frames, validate_box, continuation_inputs
+from prepare_job import select_frames, validate_box, continuation_inputs, validate_mask_crop
 from PIL import Image
 import numpy as np
 import psutil
 
 
 class SourcePreparationTests(unittest.TestCase):
+    def test_visible_character_cannot_be_silently_cropped(self):
+        mask=Image.new('L',(100,100));mask.paste(255,(30,10,70,95))
+        with self.assertRaisesRegex(ValueError,'outside the generation crop'):
+            validate_mask_crop(mask,[20,0,80,80])
+        validate_mask_crop(mask,[20,0,80,100],5)
+        with self.assertRaises(ValueError):validate_mask_crop(mask,[30,10,70,95],1)
+
     def test_continuation_rejects_misalignment_and_reference_changes(self):
         with tempfile.TemporaryDirectory() as temp:
             p=pathlib.Path(temp);(p/'generated').mkdir()

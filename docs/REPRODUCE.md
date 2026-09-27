@@ -182,3 +182,7 @@ At the end of a clip only, `pad_last: true` permits up to three repeated final
 source frames to meet the model's 4n+1 requirement. The padded inputs are recorded
 and preview export is capped at the remaining source duration. Padding cannot
 be used to fabricate a long continuation past the end of the source.
+
+The generation crop must enclose every selected performer mask, including
+requested dilation. Preparation refuses a crop that would silently omit visible
+parts of the character. Widen the crop or correct a mistaken mask before retrying.

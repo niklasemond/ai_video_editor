@@ -49,6 +49,18 @@ def validate_box(box, size):
         raise ValueError('Crop extends outside the input')
 
 
+def validate_mask_crop(mask, crop, dilation=0):
+    box = mask.convert('L').getbbox()
+    if box is None:
+        return
+    x0, y0, x1, y1 = box
+    expanded = (max(0,x0-dilation), max(0,y0-dilation),
+                min(mask.width,x1+dilation), min(mask.height,y1+dilation))
+    if not (crop[0] <= expanded[0] and crop[1] <= expanded[1]
+            and crop[2] >= expanded[2] and crop[3] >= expanded[3]):
+        raise ValueError('Performer mask extends outside the generation crop; widen it or correct the mask')
+
+
 def digest(path):
     with path.open('rb') as stream:
         return hashlib.file_digest(stream, 'sha256').hexdigest()
@@ -135,7 +147,7 @@ def main():
     mask_folders = [(args.masks, 'masks')]
     if args.composite_masks:
         mask_folders.append((args.composite_masks, 'composite-masks'))
-    for folder, _ in mask_folders:
+    for folder, name in mask_folders:
         if (folder/'INCOMPLETE').exists():
             raise ValueError('Refusing incomplete tracking results')
         for index in indices:
@@ -143,6 +155,7 @@ def main():
                 mask.load()
                 if mask.size != source_size:
                     raise ValueError('Mask and source video dimensions disagree')
+                validate_mask_crop(mask,config['crop'],dilate if name == 'masks' else 0)
     args.output.mkdir(parents=True)
     (args.output/'INCOMPLETE').write_text('Job preparation is incomplete.\n')
     for folder in ['source-frames', 'frames'] + [name for _, name in mask_folders]:

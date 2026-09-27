@@ -362,3 +362,8 @@ uses the original engine's 20-step settings without these optional adapters.
 Adapter metadata has been checked (2.175 GB total); weights have not been
 downloaded or tested. This is a specific bounded follow-up after baseline review,
 not a demonstrated faster preset.
+
+Preparation now rejects a generation crop that cuts off any part of a reviewed
+performer mask, including requested mask dilation. A visible-lower-body regression
+case verifies this check. All 29 tests pass. Full-clip masks still require actual
+tracking and visual review; this validation does not prove segmentation quality.
