@@ -341,3 +341,10 @@ composite test: expected source indices, retained full-frame pixels, changed-sou
 rejection and incomplete-job rejection. All 25 tests pass. These are media workflow
 tests, not substitutes for the ongoing actual model inference or visual quality
 assessment.
+
+Cancellation review found that the supervisor's default SIGTERM disposition could
+exit without entering its child-cleanup block. The CLI now handles SIGTERM and
+SIGINT explicitly, permits its bounded process-group cleanup to finish, and
+returns status 130. A real supervisor/child/grandchild test confirms the group
+stops on SIGTERM. Existing failure/recovery tests remain passing: 26 total.
+The already-running Animate sample is unaffected by this code change.

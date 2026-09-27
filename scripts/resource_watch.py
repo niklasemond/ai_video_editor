@@ -76,13 +76,34 @@ def run(command, log):
     finally:
         if child.poll() is None:
             import os
-            os.killpg(child.pid, signal.SIGTERM)
+            try:
+                os.killpg(child.pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass  # The child can finish between poll() and killpg().
             try:
                 child.wait(timeout=10)
             except subprocess.TimeoutExpired:
-                os.killpg(child.pid, signal.SIGKILL)
+                try:
+                    os.killpg(child.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
                 child.wait()
 
 
+def main():
+    def cancel(signum, frame):
+        # A second request must not interrupt the bounded child-group cleanup.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        raise KeyboardInterrupt
+    signal.signal(signal.SIGINT, cancel)
+    signal.signal(signal.SIGTERM, cancel)
+    try:
+        return run(sys.argv[2:], sys.argv[1])
+    except KeyboardInterrupt:
+        print('Cancelled; inference process group terminated.', file=sys.stderr)
+        return 130
+
+
 if __name__ == '__main__':
-    sys.exit(run(sys.argv[2:], sys.argv[1]))
+    sys.exit(main())

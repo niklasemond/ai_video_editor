@@ -1,9 +1,11 @@
 import hashlib
 import json
 import pathlib
+import os
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 
@@ -17,6 +19,7 @@ from segment_person import validate_prompts
 from prepare_job import select_frames, validate_box
 from PIL import Image
 import numpy as np
+import psutil
 
 
 class SourcePreparationTests(unittest.TestCase):
@@ -135,6 +138,40 @@ class DownloadTests(unittest.TestCase):
 
 
 class ResourceTests(unittest.TestCase):
+    def test_cli_sigterm_reaps_inference_process_group(self):
+        scripts=pathlib.Path(__file__).resolve().parents[1]/'scripts'
+        with tempfile.TemporaryDirectory() as temp:
+            p=pathlib.Path(temp); child_pid=p/'child'; grandchild_pid=p/'grandchild'
+            grandchild=f'import os,time,pathlib;pathlib.Path({str(grandchild_pid)!r}).write_text(str(os.getpid()));time.sleep(60)'
+            child=f'import os,time,pathlib,subprocess,sys;pathlib.Path({str(child_pid)!r}).write_text(str(os.getpid()));subprocess.Popen([sys.executable,"-c",{grandchild!r}]);time.sleep(60)'
+            launcher='import resource_watch as r,sys,time;r.sample=lambda:dict(time=time.time(),pressure=1,swap=0,available_disk=100_000_000_000);sys.exit(r.main())'
+            supervisor=subprocess.Popen([sys.executable,'-c',launcher,str(p/'resources'),
+                sys.executable,'-c',child],env={**os.environ,'PYTHONPATH':str(scripts)},
+                stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+            descendants=[]
+            try:
+                deadline=time.monotonic()+5
+                while not grandchild_pid.exists() and time.monotonic()<deadline:
+                    time.sleep(.02)
+                self.assertTrue(grandchild_pid.exists(),'Test child did not start')
+                descendants=[int(child_pid.read_text()),int(grandchild_pid.read_text())]
+                supervisor.terminate()
+                _,error=supervisor.communicate(timeout=5)
+                self.assertEqual(supervisor.returncode,130,error)
+                self.assertIn('process group terminated',error)
+                for pid in descendants:
+                    try:
+                        process=psutil.Process(pid)
+                        self.assertEqual(process.status(),psutil.STATUS_ZOMBIE)
+                    except psutil.NoSuchProcess:
+                        pass
+            finally:
+                if supervisor.poll() is None:
+                    supervisor.kill();supervisor.communicate()
+                for pid in descendants:
+                    try:psutil.Process(pid).kill()
+                    except psutil.NoSuchProcess:pass
+
     def test_denied_process_inventory_does_not_stop_supervision(self):
         from unittest.mock import Mock
         process = Mock()
