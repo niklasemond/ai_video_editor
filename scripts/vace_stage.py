@@ -139,12 +139,14 @@ with torch.inference_mode():
         reference = torch.from_numpy(np.asarray(Image.open(job / 'reference.png').convert('RGB')).copy().astype(np.float32) / 255)[None]
         assert len(pixels) == len(masks) == config['frames']
         if animate:
-            def images(folder):
+            def images(folder, count=None):
                 paths = sorted((job / folder).glob('*.png'))
-                if len(paths) != config['frames']:
+                if len(paths) != (config['frames'] if count is None else count):
                     raise ValueError('Incomplete motion controls: ' + folder)
                 return torch.from_numpy(np.stack([np.asarray(Image.open(p).convert('RGB')) for p in paths]).astype(np.float32) / 255)
-            result = WanAnimateToVideo.execute(positive, negative, vae, config['width'], config['height'], config['frames'], 1, 5, 0, reference_image=reference, face_video=images('faces'), pose_video=images('poses'), background_video=pixels, character_mask=masks)
+            continuation_count = config.get('continue_motion_frames', 0)
+            continuation = images('continuation', continuation_count) if continuation_count else None
+            result = WanAnimateToVideo.execute(positive, negative, vae, config['width'], config['height'], config['frames'], 1, 5, 0, reference_image=reference, face_video=images('faces'), pose_video=images('poses'), continue_motion=continuation, background_video=pixels, character_mask=masks)
             result = list(result)[:4]
         else:
             result = WanVaceToVideo.execute(positive, negative, vae, config['width'], config['height'], config['frames'], 1, config.get('strength',1.0), pixels, masks, reference)

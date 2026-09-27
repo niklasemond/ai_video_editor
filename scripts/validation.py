@@ -20,9 +20,18 @@ def flatten_video_frames(pixels, expected_shape):
 
 
 def validate_motion_controls(job, config):
-    for folder, size in [('poses', (config['width'], config['height'])), ('faces', (512, 512))]:
+    continuation = config.get('continue_motion_frames', 0)
+    if type(continuation) is not int or continuation not in (0, 1, 5):
+        raise ValueError('Continuation must contain zero, one or five frames')
+    folders = [('poses', (config['width'], config['height']), config['frames']),
+               ('faces', (512, 512), config['frames'])]
+    if continuation:
+        if config['frames'] <= continuation:
+            raise ValueError('Continuation leaves no new frames to generate')
+        folders.append(('continuation', (config['width'], config['height']), continuation))
+    for folder, size, count in folders:
         paths = sorted((Path(job)/folder).glob('*.png'))
-        if len(paths) != config['frames']:
+        if len(paths) != count:
             raise ValueError('Incomplete motion controls: ' + folder)
         for path in paths:
             with Image.open(path) as im:

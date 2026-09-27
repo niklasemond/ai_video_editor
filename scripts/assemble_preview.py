@@ -1,6 +1,7 @@
 """Composite a tested crop into source frames and retain synchronized source audio."""
 import argparse
 import json
+import math
 import pathlib
 import subprocess
 
@@ -36,6 +37,9 @@ def main():
     if (args.job/'INCOMPLETE').exists():raise ValueError('Incomplete job preparation')
     if not args.source.is_file():raise ValueError('Source video missing')
     cfg=json.loads((args.job/'config.json').read_text())
+    duration=cfg.get('output_duration',cfg['frames']/cfg['fps'])
+    if not math.isfinite(duration) or not 0 < duration <= cfg['frames']/cfg['fps']:
+        raise ValueError('Invalid output duration')
     generated=sorted((args.job/'generated').glob('*.png'))
     mask_folder = 'composite-masks' if cfg.get('composite_masks', False) else 'masks'
     masks=sorted((args.job/mask_folder).glob('*.png'))
@@ -55,7 +59,7 @@ def main():
         result=composite(Image.open(source).convert('RGB'),Image.open(gen).convert('RGB'),alpha,cfg['crop'],cfg.get('resize_to_crop',False))
         result.save(final/f'{i:03d}.png')
     output=args.job/'replacement-preview.mp4'
-    subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-framerate',str(cfg['fps']),'-i',str(final/'%03d.png'),'-ss',str(cfg['start']),'-i',str(args.source),'-map','0:v:0','-map','1:a:0?','-t',str(cfg['frames']/cfg['fps']),'-c:v','libx264','-crf','17','-pix_fmt','yuv420p','-c:a','aac','-b:a','192k','-movflags','+faststart',str(output)],check=True)
+    subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-framerate',str(cfg['fps']),'-i',str(final/'%03d.png'),'-ss',str(cfg['start']),'-i',str(args.source),'-map','0:v:0','-map','1:a:0?','-t',str(duration),'-c:v','libx264','-crf','17','-pix_fmt','yuv420p','-c:a','aac','-b:a','192k','-movflags','+faststart',str(output)],check=True)
     print(output.resolve())
 
 

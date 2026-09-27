@@ -348,3 +348,17 @@ SIGINT explicitly, permits its bounded process-group cleanup to finish, and
 returns status 130. A real supervisor/child/grandchild test confirms the group
 stops on SIGTERM. Existing failure/recovery tests remain passing: 26 total.
 The already-running Animate sample is unaffected by this code change.
+
+Native Animate continuation inputs are now validated and passed through to the
+existing ComfyUI node. Tests reject missing prior outputs, changed reference
+pixels and mismatched overlap indices. Actual model continuation has not yet
+been run. A real synthetic-video tail test verifies two padded inference inputs
+are omitted from a three-frame, 0.12-second export. All 28 tests pass.
+
+The official ComfyUI template at workflow_templates revision
+`9b912856b25a8564632b20857aa6353fbf78eb5a` additionally uses relighting and
+LightX2V adapters with six Euler steps, CFG1 and shift8. The current baseline
+uses the original engine's 20-step settings without these optional adapters.
+Adapter metadata has been checked (2.175 GB total); weights have not been
+downloaded or tested. This is a specific bounded follow-up after baseline review,
+not a demonstrated faster preset.

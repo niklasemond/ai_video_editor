@@ -168,3 +168,17 @@ accidentally combining prepared frames with a different video's audio. A partial
 preparation keeps an `INCOMPLETE` marker and is refused by generation/compositing.
 Recover into a fresh output directory. This helper prepares media only; model
 stages and visual acceptance are still required.
+
+For a following Animate segment, `--continue-from work/previous-job` copies the
+last five raw generated frames into the new job's native `continue_motion` input.
+The new segment must begin at those same source frame indices. Source hash,
+engine/model, frame rate, crop, dimensions and reference pixels must match.
+`--continue-frames 1` is also supported by the native node. Missing, corrupt or
+misaligned continuation inputs are rejected before model loading. This wires
+upstream functionality; actual continuation quality remains unverified. Individual
+segment previews include the overlap, which must not be duplicated when joining.
+
+At the end of a clip only, `pad_last: true` permits up to three repeated final
+source frames to meet the model's 4n+1 requirement. The padded inputs are recorded
+and preview export is capped at the remaining source duration. Padding cannot
+be used to fabricate a long continuation past the end of the source.

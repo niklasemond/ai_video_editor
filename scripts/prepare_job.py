@@ -12,23 +12,31 @@ from pathlib import Path
 import subprocess
 
 
-def select_frames(timestamps, start, count, fps, duration):
+def select_frames(timestamps, start, count, fps, duration, *, pad_last=False):
     if not math.isfinite(duration) or duration <= 0:
         raise ValueError('Invalid source duration')
     if not timestamps or any(not math.isfinite(t) for t in timestamps):
         raise ValueError('Missing/nonfinite source timestamps')
     if any(b <= a for a, b in zip(timestamps, timestamps[1:])):
         raise ValueError('Source timestamps must increase strictly')
-    if not math.isfinite(start) or start < 0 or not math.isfinite(fps) or fps <= 0:
+    if not math.isfinite(start) or not 0 <= start < duration or not math.isfinite(fps) or fps <= 0:
         raise ValueError('Invalid segment start or frame rate')
-    if type(count) is not int or count < 1 or start + (count-1)/fps >= duration:
+    if type(count) is not int or count < 1:
+        raise ValueError('Invalid frame count')
+    targets = [start + i/fps for i in range(count)]
+    if type(pad_last) is not bool:
+        raise ValueError('pad_last must be boolean')
+    if not pad_last and targets[-1] >= duration:
         raise ValueError('Requested frame times extend outside the source')
+    if pad_last and sum(t > timestamps[-1] + 1e-6 for t in targets) > 3:
+        raise ValueError('Only up to three final padding frames are permitted')
     selected = []
-    for target in (start + i/fps for i in range(count)):
+    for target in targets:
         right = bisect.bisect_left(timestamps, target)
         choices = [i for i in (right-1, right) if 0 <= i < len(timestamps)]
         selected.append(min(choices, key=lambda i: (abs(timestamps[i]-target), i)))
-    if len(set(selected)) != count:
+    duplicates = [b for a,b in zip(selected,selected[1:]) if a == b]
+    if duplicates and (not pad_last or len(duplicates) > 3 or any(i != len(timestamps)-1 for i in duplicates)):
         raise ValueError('Requested frame rate duplicates source frames; lower it')
     return selected
 
@@ -46,11 +54,41 @@ def digest(path):
         return hashlib.file_digest(stream, 'sha256').hexdigest()
 
 
+def continuation_inputs(previous, config, reference, count):
+    from PIL import Image
+    if config.get('engine') != 'animate' or count not in (1, 5):
+        raise ValueError('Native continuation requires Animate and one or five frames')
+    if config['frames'] <= count:
+        raise ValueError('Continuation leaves no new frames to generate')
+    if (previous/'INCOMPLETE').exists():
+        raise ValueError('Previous job is incomplete')
+    old = json.loads((previous/'config.json').read_text())
+    for key in ('source_sha256', 'engine', 'model', 'fps', 'width', 'height', 'crop'):
+        if old.get(key) != config.get(key):
+            raise ValueError('Continuation source or crop configuration changed: '+key)
+    if len(old.get('source_frame_indices', [])) < count or config['source_frame_indices'][:count] != old['source_frame_indices'][-count:]:
+        raise ValueError('Continuation frames do not align with source frame indices')
+    with Image.open(previous/'reference.png') as old_reference:
+        if old_reference.size != reference.size or old_reference.convert('RGB').tobytes() != reference.tobytes():
+            raise ValueError('Continuation reference image changed')
+    generated = sorted((previous/'generated').glob('*.png'))
+    if len(generated) != old['frames']:
+        raise ValueError('Previous generation is incomplete')
+    for path in generated[-count:]:
+        with Image.open(path) as frame:
+            frame.load()
+            if frame.size != reference.size:
+                raise ValueError('Continuation frame dimensions disagree')
+    return generated[-count:]
+
+
 def main():
     parser = argparse.ArgumentParser()
     for name in ('source', 'reference', 'masks', 'settings', 'output'):
         parser.add_argument('--'+name, required=True, type=Path)
     parser.add_argument('--composite-masks', type=Path)
+    parser.add_argument('--continue-from', type=Path)
+    parser.add_argument('--continue-frames', type=int, choices=(1, 5), default=5)
     args = parser.parse_args()
     from PIL import Image, ImageOps, ImageFilter
     from local_paths import validate_local_output
@@ -78,12 +116,22 @@ def main():
     source_size = (stream['width'], stream['height'])
     timestamps = [float(f['best_effort_timestamp_time']) for f in info['frames']]
     indices = select_frames(timestamps, config['start'], config['frames'],
-                            config['fps'], float(stream['duration']))
+                            config['fps'], float(stream['duration']),
+                            pad_last=config.get('pad_last', False))
     validate_box(config['crop'], source_size)
     reference = ImageOps.exif_transpose(Image.open(args.reference)).convert('RGB')
     if 'reference_crop' in config:
         validate_box(config['reference_crop'], reference.size)
         reference = reference.crop(config['reference_crop'])
+    reference = ImageOps.pad(reference, size, method=Image.Resampling.LANCZOS, color=(0,0,0))
+    config.update(source_prepared=True, source_sha256=digest(args.source),
+        source_frame_indices=indices, source_frame_pts=[timestamps[i] for i in indices],
+        resize_to_crop=True, composite_masks=bool(args.composite_masks),
+        padded_tail_frames=len(indices)-len(set(indices)),
+        output_duration=min(config['frames']/config['fps'],float(stream['duration'])-config['start']),
+        continue_motion_frames=args.continue_frames if args.continue_from else 0)
+    continuation = continuation_inputs(args.continue_from, config, reference,
+        args.continue_frames) if args.continue_from else []
     mask_folders = [(args.masks, 'masks')]
     if args.composite_masks:
         mask_folders.append((args.composite_masks, 'composite-masks'))
@@ -99,13 +147,18 @@ def main():
     (args.output/'INCOMPLETE').write_text('Job preparation is incomplete.\n')
     for folder in ['source-frames', 'frames'] + [name for _, name in mask_folders]:
         (args.output/folder).mkdir()
-    expression = '+'.join(f'eq(n\\,{i})' for i in indices)
+    unique_indices = list(dict.fromkeys(indices))
+    expression = '+'.join(f'eq(n\\,{i})' for i in unique_indices)
     subprocess.run(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-i', str(args.source),
-        '-vf', 'select='+expression, '-fps_mode', 'passthrough', '-frames:v', str(len(indices)),
+        '-vf', 'select='+expression, '-fps_mode', 'passthrough', '-frames:v', str(len(unique_indices)),
         '-start_number', '0', str(args.output/'source-frames/%03d.png')], check=True)
     sources = sorted((args.output/'source-frames').glob('*.png'))
-    if len(sources) != len(indices):
+    if len(sources) != len(unique_indices):
         raise RuntimeError('Source decoder did not return all selected frames')
+    for i in range(len(unique_indices), len(indices)):
+        path = args.output/'source-frames'/f'{i:03}.png'
+        path.write_bytes(sources[-1].read_bytes())
+        sources.append(path)
     for n, (source, index) in enumerate(zip(sources, indices)):
         Image.open(source).convert('RGB').crop(config['crop']).resize(size,
             Image.Resampling.LANCZOS).save(args.output/'frames'/f'{n:03}.png')
@@ -115,11 +168,11 @@ def main():
                 mask = mask.filter(ImageFilter.MaxFilter(2*dilate+1))
             mask.crop(config['crop']).resize(size, Image.Resampling.NEAREST).save(
                 args.output/name/f'{n:03}.png')
-    ImageOps.pad(reference, size, method=Image.Resampling.LANCZOS, color=(0,0,0)).save(
-        args.output/'reference.png')
-    config.update(source_prepared=True, source_sha256=digest(args.source),
-        source_frame_indices=indices, source_frame_pts=[timestamps[i] for i in indices],
-        resize_to_crop=True, composite_masks=bool(args.composite_masks))
+    reference.save(args.output/'reference.png')
+    if continuation:
+        (args.output/'continuation').mkdir()
+        for i, frame in enumerate(continuation):
+            (args.output/'continuation'/f'{i:03}.png').write_bytes(frame.read_bytes())
     (args.output/'config.json').write_text(json.dumps(config, indent=2)+'\n')
     validate_job(args.output, config, preparing=True)
     (args.output/'INCOMPLETE').unlink()

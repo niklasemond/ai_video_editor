@@ -16,16 +16,40 @@ from validation import validate_job, validate_vace_keys, flatten_video_frames, v
 from assemble_preview import composite
 from local_paths import validate_local_output
 from segment_person import validate_prompts
-from prepare_job import select_frames, validate_box
+from prepare_job import select_frames, validate_box, continuation_inputs
 from PIL import Image
 import numpy as np
 import psutil
 
 
 class SourcePreparationTests(unittest.TestCase):
+    def test_continuation_rejects_misalignment_and_reference_changes(self):
+        with tempfile.TemporaryDirectory() as temp:
+            p=pathlib.Path(temp);(p/'generated').mkdir()
+            ref=Image.new('RGB',(64,48),'white');ref.save(p/'reference.png')
+            old=dict(engine='animate',width=64,height=48,crop=[0,0,64,48],frames=9,
+                     source_sha256='a'*64,source_frame_indices=list(range(9)))
+            (p/'config.json').write_text(json.dumps(old))
+            for i in range(9):ref.save(p/'generated'/f'{i:03}.png')
+            current={**old,'source_frame_indices':list(range(4,13))}
+            selected=continuation_inputs(p,current,ref,5)
+            self.assertEqual([x.name for x in selected],['004.png','005.png','006.png','007.png','008.png'])
+            with self.assertRaisesRegex(ValueError,'align'):
+                continuation_inputs(p,{**current,'source_frame_indices':list(range(5,14))},ref,5)
+            with self.assertRaisesRegex(ValueError,'reference image changed'):
+                continuation_inputs(p,current,Image.new('RGB',(64,48),'black'),5)
+            (p/'generated/008.png').unlink()
+            with self.assertRaisesRegex(ValueError,'generation is incomplete'):
+                continuation_inputs(p,current,ref,5)
+
     def test_timestamps_and_bounds(self):
         times = [i/25 for i in range(25)]
         self.assertEqual(select_frames(times, .16, 5, 12.5, 1), [4,6,8,10,12])
+        self.assertEqual(select_frames(times,.88,5,25,1,pad_last=True),[22,23,24,24,24])
+        with self.assertRaisesRegex(ValueError,'three final padding'):
+            select_frames(times,.88,9,25,1,pad_last=True)
+        with self.assertRaisesRegex(ValueError,'duplicates'):
+            select_frames(times,0,5,50,1,pad_last=True)
         for args in [(times,.8,5,12.5,1), (times,0,5,50,1),
                      ([0,.08,.04],0,2,25,1), (times,0,5,25,float('nan'))]:
             with self.subTest(args=args), self.assertRaises(ValueError):
@@ -58,6 +82,23 @@ class SourcePreparationTests(unittest.TestCase):
             for i in range(5):
                 self.assertTrue(np.array_equal(np.asarray(Image.open(job/'source-frames'/f'{i:03}.png')),
                                                np.asarray(Image.open(job/'composite'/f'{i:03}.png'))))
+            tail=p/'tail';(p/'settings.json').write_text(json.dumps({**cfg,'start':.88,'fps':25,'pad_last':True}))
+            subprocess.run([sys.executable,str(root/'scripts/prepare_job.py'),
+                '--source',str(source),'--reference',str(p/'reference.png'),
+                '--masks',str(masks),'--settings',str(p/'settings.json'),
+                '--output',str(tail)],check=True,capture_output=True)
+            tail_cfg=json.loads((tail/'config.json').read_text())
+            self.assertEqual(tail_cfg['padded_tail_frames'],2)
+            self.assertAlmostEqual(tail_cfg['output_duration'],.12)
+            (tail/'generated').mkdir()
+            for frame in (tail/'frames').glob('*.png'):
+                (tail/'generated'/frame.name).write_bytes(frame.read_bytes())
+            subprocess.run([sys.executable,str(root/'scripts/assemble_preview.py'),str(tail),str(source)],
+                           check=True,capture_output=True)
+            metadata=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_entries',
+                'stream=nb_frames,duration','-of','json',str(tail/'replacement-preview.mp4')]))
+            self.assertEqual(metadata['streams'][0]['nb_frames'],'3')
+            self.assertAlmostEqual(float(metadata['streams'][0]['duration']),.12)
             with source.open('ab') as stream:stream.write(b'changed')
             result=subprocess.run(command,capture_output=True,text=True)
             self.assertNotEqual(result.returncode,0)
@@ -207,6 +248,18 @@ class ResourceTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'dimensions'):
                 validate_motion_controls(root,cfg)
             Image.new('RGB',(512,512)).save(root/'faces/000.png')
+            validate_motion_controls(root,cfg)
+
+    def test_missing_continuation_refused_before_inference(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=pathlib.Path(temp);cfg=dict(frames=9,width=64,height=48,continue_motion_frames=5)
+            for folder,size in [('poses',(64,48)),('faces',(512,512))]:
+                (root/folder).mkdir()
+                for i in range(9):Image.new('RGB',size).save(root/folder/f'{i:03}.png')
+            with self.assertRaisesRegex(ValueError,'continuation'):
+                validate_motion_controls(root,cfg)
+            (root/'continuation').mkdir()
+            for i in range(5):Image.new('RGB',(64,48)).save(root/'continuation'/f'{i:03}.png')
             validate_motion_controls(root,cfg)
 
     def record(self, pressure=1, swap=0, disk=100_000_000_000):
