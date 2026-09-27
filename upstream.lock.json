@@ -1,0 +1,29 @@
+{
+  "ComfyUI": {
+    "url": "https://github.com/Comfy-Org/ComfyUI",
+    "revision": "b8730510db30c8858e1e5d8e126ef19eac395560",
+    "tag": "v0.3.60",
+    "license": "GPL-3.0"
+  },
+  "ComfyUI-GGUF": {
+    "url": "https://github.com/city96/ComfyUI-GGUF",
+    "revision": "6ea2651e7df66d7585f6ffee804b20e92fb38b8a",
+    "license": "Apache-2.0"
+  },
+  "controlnet_aux": {
+    "url": "https://github.com/Fannovel16/comfyui_controlnet_aux",
+    "revision": "59b1fc411ede8623b2997855b8018f0b3b6cf49f",
+    "license": "See upstream per-component licenses; OpenPose-derived preprocessing is non-commercial"
+  },
+  "Wan2.2-config-reference": {
+    "url": "https://github.com/Wan-Video/Wan2.2",
+    "revision": "1ea34ff48f87168174e12956e200b1d908b1c5ff",
+    "purpose": "Reference only: verified Animate sampler defaults; original engine not installed"
+  },
+  "SAM2": {
+    "url": "https://github.com/facebookresearch/sam2",
+    "revision": "2b90b9f5ceec907a1c18123530e92e794ad901a4",
+    "license": "Apache-2.0",
+    "purpose": "CPU performer segmentation; optional CUDA postprocessing disabled"
+  }
+}

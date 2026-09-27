@@ -1,0 +1,74 @@
+[
+  {
+    "repo": "samuelchristlie/Wan2.1-VACE-1.3B-GGUF",
+    "revision": "839f67aa27bb81ce7f0dc6005132d32df64e14df",
+    "filename": "Wan2.1-VACE-1.3B-Q8_0.gguf",
+    "size": 2317975232,
+    "sha256": "bbde4d08c4eeaaf8eaa68731878788b6ff0117cc22b3c3b489c1860b49c560a1",
+    "destination": "diffusion_models/Wan2.1-VACE-1.3B-Q8_0.gguf"
+  },
+  {
+    "repo": "city96/umt5-xxl-encoder-gguf",
+    "revision": "b535255bee98c2b0a59ea7c0ae2dcd0c6657b3b7",
+    "filename": "umt5-xxl-encoder-Q4_K_M.gguf",
+    "size": 3655145312,
+    "sha256": "17cf97a5bbbc60a646d6105b832b6f657ce904a8a1ad970e4b59df0c67584a40",
+    "destination": "text_encoders/umt5-xxl-encoder-Q4_K_M.gguf"
+  },
+  {
+    "repo": "Comfy-Org/Wan_2.1_ComfyUI_repackaged",
+    "revision": "123acf1cc74bccbb9bfff8ac1ee72edc08c2341d",
+    "filename": "split_files/vae/wan_2.1_vae.safetensors",
+    "size": 253815318,
+    "sha256": "2fc39d31359a4b0a64f55876d8ff7fa8d780956ae2cb13463b0223e15148976b",
+    "destination": "vae/wan_2.1_vae.safetensors"
+  },
+  {
+    "repo": "Comfy-Org/Wan_2.1_ComfyUI_repackaged",
+    "revision": "123acf1cc74bccbb9bfff8ac1ee72edc08c2341d",
+    "filename": "split_files/diffusion_models/wan2.1_vace_1.3B_fp16.safetensors",
+    "size": 4309519800,
+    "sha256": "640ccc0577e6a5d4bb15cd91b11b699ef914fc55f126c5a1c544e152130784f2",
+    "destination": "diffusion_models/wan2.1_vace_1.3B_fp16.safetensors"
+  },
+  {
+    "repo": "QuantStack/Wan2.2-Animate-14B-GGUF",
+    "revision": "33c51bb84d4e70ffc0d088aeb6068d40d9446fa3",
+    "filename": "Wan2.2-Animate-14B-Q2_K.gguf",
+    "size": 6457431872,
+    "sha256": "26679a25c6076b3cbcf696db8f6e28aff9eb6c13a4bff17f21cb7c52e257f1ba",
+    "destination": "diffusion_models/Wan2.2-Animate-14B-Q2_K.gguf"
+  },
+  {
+    "repo": "Comfy-Org/Wan_2.1_ComfyUI_repackaged",
+    "revision": "123acf1cc74bccbb9bfff8ac1ee72edc08c2341d",
+    "filename": "split_files/clip_vision/clip_vision_h.safetensors",
+    "size": 1264219396,
+    "sha256": "64a7ef761bfccbadbaa3da77366aac4185a6c58fa5de5f589b42a65bcc21f161",
+    "destination": "clip_vision/clip_vision_h.safetensors"
+  },
+  {
+    "repo": "yzd-v/DWPose",
+    "revision": "1a7144101628d69ee7a3768d1ee3a094070dc388",
+    "filename": "dw-ll_ucoco_384.onnx",
+    "size": 134399116,
+    "sha256": "724f4ff2439ed61afb86fb8a1951ec39c6220682803b4a8bd4f598cd913b1843",
+    "destination": "pose/dw-ll_ucoco_384.onnx"
+  },
+  {
+    "repo": "QuantStack/Wan2.2-Animate-14B-GGUF",
+    "revision": "33c51bb84d4e70ffc0d088aeb6068d40d9446fa3",
+    "filename": "Wan2.2-Animate-14B-Q3_K_S.gguf",
+    "size": 7969675072,
+    "sha256": "34ac135fce253551ebd0f464449af3de43fb981c70d27371a32a59a753647709",
+    "destination": "diffusion_models/Wan2.2-Animate-14B-Q3_K_S.gguf"
+  },
+  {
+    "repo": "facebook/sam2.1-hiera-tiny",
+    "revision": "de431c4043854a71d8101e17995dfe596bf101a5",
+    "filename": "sam2.1_hiera_tiny.pt",
+    "size": 156008466,
+    "sha256": "7402e0d864fa82708a20fbd15bc84245c2f26dff0eb43a4b5b93452deb34be69",
+    "destination": "segmentation/sam2.1_hiera_tiny.pt"
+  }
+]
