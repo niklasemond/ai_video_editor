@@ -31,7 +31,9 @@ def validate_motion_controls(job, config):
                     raise ValueError('Wrong motion-control dimensions: ' + folder)
 
 
-def validate_job(job, config):
+def validate_job(job, config, *, preparing=False):
+    if not preparing and (Path(job)/'INCOMPLETE').exists():
+        raise ValueError('Incomplete job preparation; recover into a new directory')
     if not isinstance(config.get('tiled_vae', False), bool):
         raise ValueError('tiled_vae must be boolean')
     if not isinstance(config.get('composite_masks', False), bool):

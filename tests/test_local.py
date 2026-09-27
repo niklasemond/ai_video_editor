@@ -1,4 +1,5 @@
 import hashlib
+import json
 import pathlib
 import subprocess
 import sys
@@ -13,8 +14,54 @@ from validation import validate_job, validate_vace_keys, flatten_video_frames, v
 from assemble_preview import composite
 from local_paths import validate_local_output
 from segment_person import validate_prompts
+from prepare_job import select_frames, validate_box
 from PIL import Image
 import numpy as np
+
+
+class SourcePreparationTests(unittest.TestCase):
+    def test_timestamps_and_bounds(self):
+        times = [i/25 for i in range(25)]
+        self.assertEqual(select_frames(times, .16, 5, 12.5, 1), [4,6,8,10,12])
+        for args in [(times,.8,5,12.5,1), (times,0,5,50,1),
+                     ([0,.08,.04],0,2,25,1), (times,0,5,25,float('nan'))]:
+            with self.subTest(args=args), self.assertRaises(ValueError):
+                select_frames(*args)
+        with self.assertRaises(ValueError):validate_box([0,0,65,48],(64,48))
+
+    def test_real_decode_prepare_composite_and_changed_source(self):
+        root = pathlib.Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as temp:
+            p=pathlib.Path(temp); source=p/'source.mp4'; masks=p/'masks';masks.mkdir()
+            subprocess.run(['ffmpeg','-v','error','-f','lavfi','-i',
+                'testsrc2=size=64x48:rate=25:duration=1','-c:v','libx264',str(source)],check=True)
+            Image.new('RGB',(64,48),'white').save(p/'reference.png')
+            for i in range(25):Image.new('L',(64,48),255).save(masks/f'{i:05}.png')
+            cfg=dict(width=64,height=48,frames=5,fps=12.5,start=.16,crop=[0,0,64,48],
+                     steps=20,cfg=1,positive='test person',negative='',seed=1)
+            (p/'settings.json').write_text(json.dumps(cfg));job=p/'job'
+            subprocess.run([sys.executable,str(root/'scripts/prepare_job.py'),
+                '--source',str(source),'--reference',str(p/'reference.png'),
+                '--masks',str(masks),'--settings',str(p/'settings.json'),
+                '--output',str(job)],check=True,capture_output=True)
+            prepared=json.loads((job/'config.json').read_text())
+            self.assertEqual(prepared['source_frame_indices'],[4,6,8,10,12])
+            self.assertFalse((job/'INCOMPLETE').exists())
+            (job/'generated').mkdir()
+            for frame in (job/'frames').glob('*.png'):
+                (job/'generated'/frame.name).write_bytes(frame.read_bytes())
+            command=[sys.executable,str(root/'scripts/assemble_preview.py'),str(job),str(source)]
+            subprocess.run(command,check=True,capture_output=True)
+            for i in range(5):
+                self.assertTrue(np.array_equal(np.asarray(Image.open(job/'source-frames'/f'{i:03}.png')),
+                                               np.asarray(Image.open(job/'composite'/f'{i:03}.png'))))
+            with source.open('ab') as stream:stream.write(b'changed')
+            result=subprocess.run(command,capture_output=True,text=True)
+            self.assertNotEqual(result.returncode,0)
+            self.assertIn('Source video changed',result.stderr)
+            (job/'INCOMPLETE').write_text('interrupted')
+            with self.assertRaisesRegex(ValueError,'Incomplete job preparation'):
+                validate_job(job,prepared)
 
 
 class SegmentationPromptTests(unittest.TestCase):

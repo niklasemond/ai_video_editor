@@ -141,3 +141,30 @@ content classifier was found in the inspected loader/tracker path. This is a
 bounded inspection, not a claim about every dependency or unrestricted capability.
 
 Prompt-validation tests pass; actual tracked-mask inference is still pending.
+
+## Source-aligned job preparation
+
+`prepare_job.py` accepts a local video, reference image, reviewed full-frame masks,
+settings JSON and a new output directory. Masks use the source's zero-based
+decoded frame indices (`00000.png`, etc.). An optional separate compositing-mask
+folder protects reviewed foreground occlusions.
+
+```sh
+.venv/bin/python scripts/prepare_job.py \
+  --source input.mp4 --reference reference.png --masks work/person-masks \
+  --settings work/settings.json --output work/job
+```
+
+Settings contain the usual stage configuration, a source-pixel `crop` rectangle,
+`start`, `fps`, and a bounded 4n+1 frame count (5–25). An optional `reference_crop`
+rectangle performs ordinary cropping before aspect-preserving padding; it does
+not synthesize or retouch the reference. `mask_dilate` defaults to zero and can
+expand inference masks by up to 16 source pixels, after visual review. Separate
+compositing masks are not dilated automatically.
+
+Source timestamps select each frame once. The saved full-size `source-frames/`
+sequence is reused by compositing, and a source-file SHA256 check prevents
+accidentally combining prepared frames with a different video's audio. A partial
+preparation keeps an `INCOMPLETE` marker and is refused by generation/compositing.
+Recover into a fresh output directory. This helper prepares media only; model
+stages and visual acceptance are still required.

@@ -332,3 +332,12 @@ full-clip occlusion masks. Its CPU runner is staged but has not yet been used fo
 inference. Prompt validation brings the local suite to 23 passing tests; pip
 reports no broken requirements. Project files occupy about 29.6 GB, plus about
 0.13 GB of known external caches, before any additional full-clip generation.
+
+Animate's first 480p step completed in 553.26 seconds, consistent with roughly
+three hours of sampling if the rate holds. This is still an in-progress test.
+
+The source-aligned preparation helper passes a real synthetic-video decode and
+composite test: expected source indices, retained full-frame pixels, changed-source
+rejection and incomplete-job rejection. All 25 tests pass. These are media workflow
+tests, not substitutes for the ongoing actual model inference or visual quality
+assessment.

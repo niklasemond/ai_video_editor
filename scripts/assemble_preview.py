@@ -7,6 +7,7 @@ import subprocess
 import numpy as np
 from PIL import Image, ImageFilter
 from local_paths import validate_local_output
+from prepare_job import digest
 
 
 def composite(source, generated, mask, box, resize_to_crop=False):
@@ -32,6 +33,7 @@ def main():
     parser.add_argument('source',type=pathlib.Path)
     args=parser.parse_args()
     validate_local_output(args.job)
+    if (args.job/'INCOMPLETE').exists():raise ValueError('Incomplete job preparation')
     if not args.source.is_file():raise ValueError('Source video missing')
     cfg=json.loads((args.job/'config.json').read_text())
     generated=sorted((args.job/'generated').glob('*.png'))
@@ -41,7 +43,11 @@ def main():
         raise ValueError('Incomplete generation or mask sequence')
     original=args.job/'source-frames';original.mkdir(exist_ok=True)
     final=args.job/'composite';final.mkdir(exist_ok=True)
-    subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-ss',str(cfg['start']),'-i',str(args.source),'-vf',f"fps={cfg['fps']}",'-frames:v',str(cfg['frames']),str(original/'%03d.png')],check=True)
+    if cfg.get('source_prepared', False):
+        if digest(args.source) != cfg.get('source_sha256'):
+            raise ValueError('Source video changed since frame preparation')
+    else:
+        subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-ss',str(cfg['start']),'-i',str(args.source),'-vf',f"fps={cfg['fps']}",'-frames:v',str(cfg['frames']),str(original/'%03d.png')],check=True)
     frames=sorted(original.glob('*.png'))
     if len(frames)!=cfg['frames']:raise ValueError('Source segment too short')
     for i,(source,gen,mask) in enumerate(zip(frames,generated,masks)):
